@@ -1,0 +1,44 @@
+services:
+
+  api:
+    build: . # Usamos el Dockerfile ya hecho
+    ports:
+      - "3000:3000" # PC:Contenedor
+    volumes:
+      - .:/app # Carpeta actual -> carpeta a la que vamos a mandar el cotenido dentro del contenedor
+      - /app/node_modules # aisla el node_modules del contenedor
+    environment:
+      NODE_ENV: development
+
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/neoglito
+      ENCRYPTION_SECRET_KEY: ${ENCRYPTION_SECRET_KEY}
+      # URL para conectarnos a PostgreSQL
+      # postgres:postgres → usuario:contraseña
+      # @postgres → nombre del servicio de PostgreSQL
+      # 5432 → puerto de PostgreSQL
+      # repository_analyzer → nombre de la base de datos
+
+    depends_on:
+      postgres: # Si este no esta levantado nosotros no levantamos el api
+        condition: service_healthy # Espera que se acepten conexiones reales
+    command: >
+      sh -c "npx prisma generate &&
+             npx prisma migrate dev &&
+             npm run start:dev"
+
+  postgres:
+    image: postgres:17-alpine
+
+    environment:
+      POSTGRES_DB: neoglito
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    ports:
+      - "5432:5432" # PC:Contenedor
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Guarda los datos de postgresql fuera del cotenedor
+
+volumes:
+  postgres_data: 

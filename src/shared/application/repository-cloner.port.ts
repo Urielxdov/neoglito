@@ -1,10 +1,8 @@
-export const REPOSITORY_CLONER = Symbol("REPOSITORY_CLONER")
+export const GIT_CLONER_PORT = Symbol("GIT_CLONER_PORT")
 
 export interface RepositoryClonerPort {
     clone(
-        nameRepository: string,
         cloneUrl: string,
-        sshPrivateKey: string,
-        destination: string
-    ): Promise<void>
+        sshPrivateKey: string
+    ): Promise<string>
 }

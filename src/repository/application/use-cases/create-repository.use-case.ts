@@ -70,6 +70,7 @@ export class CreateRepositoryUseCase {
                 cloneUrl,
                 encryptedSshPrivateKey,
                 technology,
+                null,
                 now,
                 now,
             ),

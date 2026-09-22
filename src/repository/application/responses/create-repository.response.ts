@@ -3,7 +3,7 @@ export class CreateRepositoryResponse {
         public readonly id: number,
         public readonly projectId: number,
         public readonly cloneUrl: string,
-        public readonly technology: string,
+        public readonly technology: string | null,
         public readonly createdAt: Date,
         public readonly updatedAt: Date,
     ) {}

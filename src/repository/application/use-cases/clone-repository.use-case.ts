@@ -1,11 +1,17 @@
-import { Inject, Injectable } from "@nestjs/common";
+import {
+    BadRequestException,
+    ConflictException,
+    Inject,
+    Injectable,
+} from "@nestjs/common";
 import { ENCRYPTION_PORT } from "../../../shared/application/encryption.port.js";
 import type { EncryptionPort } from "../../../shared/application/encryption.port.js";
-import { Repository } from "../../domain/entities/repository.entity.js";
-import { error } from "console";
-import { exec } from "child_process";
+import { GIT_CLONER_PORT } from "../../../shared/application/repository-cloner.port.js";
+import type { RepositoryClonerPort } from "../../../shared/application/repository-cloner.port.js";
 import { PROJECT_REPOSITORY, type ProjectRepository } from "../../domain/entities/project.repository.js";
-
+import { REPOSITORY_REPOSITORY, type RepositoryRepository } from "../../domain/entities/repository.repository.js";
+import { Repository } from "../../domain/entities/repository.entity.js";
+import { CloneRepositoryDto } from "../dto/clone-repository.dto.js";
 
 @Injectable()
 export class CloneRepositoryUseCase {
@@ -13,38 +19,66 @@ export class CloneRepositoryUseCase {
         @Inject(ENCRYPTION_PORT)
         private readonly encryptionService: EncryptionPort,
         @Inject(PROJECT_REPOSITORY)
-        private readonly porjectRepository: ProjectRepository
+        private readonly projectRepository: ProjectRepository,
+        @Inject(REPOSITORY_REPOSITORY)
+        private readonly repositoryRepository: RepositoryRepository,
+        @Inject(GIT_CLONER_PORT)
+        private readonly gitClonerService: RepositoryClonerPort,
     ) {}
 
+    async execute(request: CloneRepositoryDto): Promise<string> {
+        const cloneUrl = request.cloneUrl?.trim()
+        const sshPrivateKey = request.sshPrivateKey
+        const technology = request.technology?.trim() || null
 
-    async execute (
-        repository: Repository
-    ): Promise<any> {
-        const cloneUrl = repository.cloneUrl
-        const encryptedSsh = repository.sshPrivateKey
-        const decryptedSsh = this.encryptionService.decrypt(encryptedSsh)
-
-        const project = await this.porjectRepository.findById(repository.projectId)
-
-        if(!project) {
-            return
+        if (
+            !Number.isInteger(request.projectId) ||
+            request.projectId <= 0 ||
+            !cloneUrl ||
+            !sshPrivateKey ||
+            !sshPrivateKey.trim()
+        ) {
+            throw new BadRequestException(
+                "projectId, cloneUrl and sshPrivateKey are required",
+            )
         }
 
-        // Solo funciona para windows de momento
-        exec(`mkdir ${project.name}`, (error, stdout, stderr) => {
-            exec(`cd ./${project.name}`)
-            // Creacion de la carpeta para clave
-            exec(`New-Item -ItemType Directory -Path ".keys" -Force`)
+        await this.projectRepository.findById(request.projectId)
 
-            // Asignarle permisos de seguridad restringidos
-            exec(`icacls id_ed25519 /c /inheritance:r`)
-            exec(`icacls "C:\MisProyectos\.keys\id_ed25519" /grant:r "$($env:USERNAME):F"`)
+        const existingRepository =
+            await this.repositoryRepository.findByProjectIdAndCloneUrl(
+                request.projectId,
+                cloneUrl,
+            )
 
-            // Agregar la clave privada al archivo
-            exec(`copy .keys\id_ed25519 ${decryptedSsh}`)
+        if (existingRepository) {
+            throw new ConflictException(
+                "A repository with this cloneUrl already exists for this project",
+            )
+        }
 
-            exec(`git clone ${cloneUrl}`)
-        })
-        
+        const pathSystem = await this.gitClonerService.clone(
+            cloneUrl,
+            sshPrivateKey,
+        )
+        const encryptedSshPrivateKey = await this.encryptionService.encrypt(
+            sshPrivateKey,
+        )
+        const now = new Date()
+
+        await this.repositoryRepository.save(
+            new Repository(
+                undefined,
+                request.projectId,
+                cloneUrl,
+                encryptedSshPrivateKey,
+                technology,
+                pathSystem,
+                now,
+                now,
+            ),
+        )
+
+        return pathSystem
     }
 }

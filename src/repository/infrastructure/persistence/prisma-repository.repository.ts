@@ -18,6 +18,7 @@ export class PrismaRepositoryRepository
                         cloneUrl: repository.cloneUrl,
                         sshPrivateKey: repository.sshPrivateKey,
                         technology: repository.technology,
+                        pathSystem: repository.pathSystem,
                         createdAt: repository.createdAt,
                         updatedAt: repository.updatedAt,
                     },
@@ -29,6 +30,7 @@ export class PrismaRepositoryRepository
                         cloneUrl: repository.cloneUrl,
                         sshPrivateKey: repository.sshPrivateKey,
                         technology: repository.technology,
+                        pathSystem: repository.pathSystem,
                     },
                 })
 
@@ -68,7 +70,8 @@ export class PrismaRepositoryRepository
             projectId: number
             cloneUrl: string
             sshPrivateKey: string
-            technology: string
+            technology: string | null
+            pathSystem: string | null
             createdAt: Date
             updatedAt: Date
         }): Repository {
@@ -78,6 +81,7 @@ export class PrismaRepositoryRepository
                 data.cloneUrl,
                 data.sshPrivateKey,
                 data.technology,
+                data.pathSystem,
                 data.createdAt,
                 data.updatedAt,
             )

@@ -1,7 +1,17 @@
-import { Controller, Get, Query, Redirect } from "@nestjs/common";
+import { Controller, Get, Query, Redirect, Req, Res, UnauthorizedException, UseGuards } from "@nestjs/common";
+import type { Request, Response } from "express";
 import { ExchangeGithubCodeUseCase } from "../application/exchange_github_code.js";
 import { GetGitHubUserUseCase } from "../application/get_github_user.js";
 import { AuthenticateWithGitHubUseCase } from "../application/authenticate_with_github.js";
+import { AuthUseCase } from "../application/auth.use-case.js";
+import { JwtAuthGuard } from "../infrastructure/passport/jwt-auth.guard.js";
+
+interface AuthenticatedRequest extends Request {
+    user: {
+        id: number
+        username: string
+    }
+}
 
 
 @Controller('auth')
@@ -11,7 +21,19 @@ export class AuthController{
         private readonly exchangeGithubCodeUseCase: ExchangeGithubCodeUseCase,
         private readonly getGitHubUserUseCase: GetGitHubUserUseCase,
         private readonly authenticateWithGitHubUseCase: AuthenticateWithGitHubUseCase,
+        private readonly authUseCase: AuthUseCase,
     ) {}
+
+    @Get()
+    auth() {
+        
+    }
+
+    @Get('me')
+    @UseGuards(JwtAuthGuard)
+    me(@Req() request: AuthenticatedRequest) {
+        return request.user
+    }
 
     @Get('github')
     @Redirect()
@@ -28,19 +50,36 @@ export class AuthController{
     }
 
     @Get('github/callback')
-    async githubCallback(@Query('code') code: string) {
+    @Redirect()
+    async githubCallback(
+        @Query('code') code: string,
+        @Res({ passthrough: true }) response: Response,
+    ) {
         const token = await this.exchangeGithubCodeUseCase.execute(code)
         const profile = await this.getGitHubUserUseCase.execute(token.accessToken)
         const authenticatedUser = await this.authenticateWithGitHubUseCase.execute({ token, profile })
+        const userId = authenticatedUser.user.id
+
+        if (userId === undefined) {
+            throw new UnauthorizedException('No fue posible autenticar al usuario')
+        }
+
+        const { accessToken } = await this.authUseCase.execute({
+            id: userId,
+            username: authenticatedUser.githubConnection.username,
+        })
+
+        response.cookie('access_token', accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 1_000,
+            path: '/',
+        })
 
         return {
-            user: authenticatedUser.user,
-            githubConnection: {
-                id: authenticatedUser.githubConnection.id,
-                githubId: authenticatedUser.githubConnection.githubId,
-                username: authenticatedUser.githubConnection.username,
-                avatarUrl: authenticatedUser.githubConnection.avatarUrl,
-            },
+            url: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+            statusCode: 302,
         }
     }
 

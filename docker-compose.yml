@@ -12,6 +12,8 @@ services:
 
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/neoglito
       ENCRYPTION_SECRET_KEY: ${ENCRYPTION_SECRET_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       NODE_TLS_REJECT_UNAUTHORIZED: ${NODE_TLS_REJECT_UNAUTHORIZED:-1}
       # URL para conectarnos a PostgreSQL
       # postgres:postgres → usuario:contraseña

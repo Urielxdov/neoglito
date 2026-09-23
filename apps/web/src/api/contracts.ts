@@ -1,4 +1,7 @@
 export type {
+    ApiError,
+    ApiMeta,
+    ApiResponse,
     CloneRepositoryRequest,
     CloneRepositoryResponse,
     CreateProjectRequest,

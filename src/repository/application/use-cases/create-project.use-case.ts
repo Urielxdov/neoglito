@@ -46,8 +46,8 @@ export class CreateProjectUseCase {
             project.id,
             project.name,
             project.description,
-            project.createdAt,
-            project.updatedAt,
+            project.createdAt.toISOString(),
+            project.updatedAt.toISOString(),
         )
     }
 }

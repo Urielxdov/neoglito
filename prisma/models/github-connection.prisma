@@ -1,9 +1,8 @@
 model GitHubConnection {
   id                   Int       @id @default(autoincrement())
-  userId               Int       @unique
   githubUserId         String    @unique
   accessTokenEncrypted String
   expiresAt            DateTime?
   scopes               String[]
-  user                 User @relation(fields: [userId], references: [id])
+  user                 User?
 }

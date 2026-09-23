@@ -6,7 +6,7 @@ import { PROJECT_REPOSITORY } from "./domain/entities/project.repository.js";
 import { REPOSITORY_REPOSITORY } from "./domain/entities/repository.repository.js";
 import { PrismaProjectRepository } from "./infrastructure/persistence/prisma-project.repository.js";
 import { PrismaRepositoryRepository } from "./infrastructure/persistence/prisma-repository.repository.js";
-import { ProjectController } from "./presentation/project.repository.js";
+import { ProjectController } from "./presentation/project.controller.js";
 import { RepositoryController } from "./presentation/repository.controller.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { ENCRYPTION_PORT } from "../shared/application/encryption.port.js";

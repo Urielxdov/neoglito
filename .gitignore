@@ -2,6 +2,9 @@
 /dist
 /node_modules
 /build
+apps/*/dist
+apps/*/node_modules
+packages/*/dist
 
 # TypeScript build cache
 *.tsbuildinfo

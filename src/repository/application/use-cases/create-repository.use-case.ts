@@ -85,8 +85,8 @@ export class CreateRepositoryUseCase {
             repository.projectId,
             repository.cloneUrl,
             repository.technology,
-            repository.createdAt,
-            repository.updatedAt,
+            repository.createdAt.toISOString(),
+            repository.updatedAt.toISOString(),
         )
     }
 }

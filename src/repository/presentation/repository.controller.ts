@@ -5,6 +5,7 @@ import { CreateRepositoryResponse } from "../application/responses/create-reposi
 import { CreateRepositoryUseCase } from "../application/use-cases/create-repository.use-case.js";
 import { CloneRepositoryUseCase } from "../application/use-cases/clone-repository.use-case.js";
 import { CloneRepositoryDto } from "../application/dto/clone-repository.dto.js";
+import type { CloneRepositoryResponse } from "@neoglito/shared";
 
 @Controller('repository')
 export class RepositoryController {
@@ -28,7 +29,7 @@ export class RepositoryController {
     }
 
     @Post('clone')
-    async cloneRepository(@Body() dto: CloneRepositoryDto): Promise<{ pathSystem: string }> {
+    async cloneRepository(@Body() dto: CloneRepositoryDto): Promise<CloneRepositoryResponse> {
         const pathSystem = await this.cloneRepositoryUseCase.execute(dto)
         return { pathSystem }
     }

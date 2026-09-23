@@ -1,7 +1,6 @@
 model User {
   id               Int               @id @default(autoincrement())
-  githubConnectionId Int?            @unique
-  email            String            @unique
+  name             String
   createdAt        DateTime          @default(now())
-  githubConnection GitHubConnection? @relation(fields: [githubConnectionId], references: [id])
+  githubConnection GitHubConnection?
 }

@@ -12,22 +12,31 @@ services:
 
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/neoglito
       ENCRYPTION_SECRET_KEY: ${ENCRYPTION_SECRET_KEY}
+      NODE_TLS_REJECT_UNAUTHORIZED: ${NODE_TLS_REJECT_UNAUTHORIZED:-1}
       # URL para conectarnos a PostgreSQL
       # postgres:postgres → usuario:contraseña
       # @postgres → nombre del servicio de PostgreSQL
       # 5432 → puerto de PostgreSQL
       # repository_analyzer → nombre de la base de datos
+      
 
     depends_on:
       postgres: # Si este no esta levantado nosotros no levantamos el api
         condition: service_healthy # Espera que se acepten conexiones reales
     command: >
       sh -c "npx prisma generate &&
-             npx prisma migrate dev &&
+             npx prisma migrate deploy &&
              npm run start:dev"
 
   postgres:
     image: postgres:17-alpine
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d neoglito"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
     environment:
       POSTGRES_DB: neoglito
@@ -39,6 +48,18 @@ services:
 
     volumes:
       - postgres_data:/var/lib/postgresql/data # Guarda los datos de postgresql fuera del cotenedor
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: 
+      sh -c "npm install &&
+             npm --workspace @neoglito/web run dev -- --host 0.0.0.0"
 
 volumes:
   postgres_data: 

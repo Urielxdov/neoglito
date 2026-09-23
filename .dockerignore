@@ -1,0 +1,25 @@
+# dependencias
+node_modules/
+**/node_modules
+
+# Archivos de build locales
+dist/
+coverage/
+**/dist
+**/coverage
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Control de versiones
+.git/
+.gitignore
+.vscode/
+
+# Archivos de Docker y documentacion
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+README.md

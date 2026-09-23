@@ -12,22 +12,13 @@
   "type": "module",
   "scripts": {
     "build": "nest build",
-    "build:api": "nest build",
-    "build:web": "npm --workspace @neoglito/web run build",
-    "build:all": "npm run build:api && npm run build:web",
     "deploy": "nest deploy",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "format:web": "prettier --write \"apps/web/src/**/*.{ts,tsx,css}\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "dev:api": "nest start --watch",
-    "dev:web": "npm --workspace @neoglito/web run dev",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main",
     "lint": "oxlint --type-aware src/ test/",
-    "lint:api": "oxlint --type-aware src/ test/",
-    "lint:web": "npm --workspace @neoglito/web run lint",
-    "lint:all": "npm run lint:api && npm run lint:web",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
@@ -36,8 +27,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "prisma:studio": "prisma studio",
-    "postinstall": "prisma skills sync || exit 0"
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

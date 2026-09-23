@@ -1,6 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from "@nestjs/common";
 import type { Response } from "express";
-import type { ApiError, ApiResponse } from "@neoglito/shared";
+import type { ApiError, ApiResponse } from "@neoglito/shared/api";
 
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {

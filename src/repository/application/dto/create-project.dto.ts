@@ -1,4 +1,4 @@
-import type { CreateProjectRequest } from "@neoglito/shared";
+import type { CreateProjectRequest } from "@neoglito/shared/repository";
 
 export class CreateProjectDto implements CreateProjectRequest {
     name!: string

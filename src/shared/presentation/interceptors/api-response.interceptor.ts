@@ -1,5 +1,5 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from "@nestjs/common";
-import type { ApiResponse } from "@neoglito/shared";
+import type { ApiResponse } from "@neoglito/shared/api";
 import { map, Observable } from "rxjs";
 
 interface RedirectResponse {

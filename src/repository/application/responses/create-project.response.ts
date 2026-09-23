@@ -1,4 +1,4 @@
-import type { CreateProjectResponse as CreateProjectResponseContract } from "@neoglito/shared";
+import type { CreateProjectResponse as CreateProjectResponseContract } from "@neoglito/shared/repository";
 
 export class CreateProjectResponse implements CreateProjectResponseContract {
     constructor(

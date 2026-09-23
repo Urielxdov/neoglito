@@ -1,10 +1,17 @@
-import { useState } from 'react'
-import { authService } from '../services/auth.service'
+export type ThemeMode = 'light' | 'dark'
+export type GithubAccount = { user: string; repos?: number }
+export type StatusKind = 'ok' | 'err' | 'wait'
+export type Status = { kind: StatusKind; title: string; text: string }
 
-type ThemeMode = 'light' | 'dark'
-type GithubAccount = { user: string; repos: number }
-type StatusKind = 'ok' | 'err' | 'wait'
-type Status = { kind: StatusKind; title: string; text: string }
+interface GitHubConnectionPanelProps {
+  theme: ThemeMode
+  account: GithubAccount | null
+  status: Status | null
+  onThemeChange(theme: ThemeMode): void
+  onGithub(): void
+  onCancel(): void
+  onPrimary(): void
+}
 
 const STATUS_ICON: Record<StatusKind, string> = { ok: '✓', err: '!', wait: '…' }
 
@@ -21,30 +28,19 @@ const btnGhost =
 const btnPrimary =
   'border-transparent bg-[#2257c4] dark:bg-[#5b8df5] text-white dark:text-[#0b1220] shadow-[0_1px_2px_rgba(34,87,196,0.35)] hover:bg-[#1c489f] dark:hover:bg-[#7aa4ff] active:translate-y-px'
 
-function RegistrarProyectoGit() {
-  const [theme, setTheme] = useState<ThemeMode>('light')
-  const [gh, setGh] = useState<GithubAccount | null>(null)
-  const [status, setStatus] = useState<Status | null>(null)
-
+function GitHubConnectionPanel({
+  theme,
+  account,
+  status,
+  onThemeChange,
+  onGithub,
+  onCancel,
+  onPrimary,
+}: GitHubConnectionPanelProps) {
   const dark = theme === 'dark'
-
-  const handleGithub = () => {
-    setStatus({ kind: 'wait', title: 'Redirigiendo a GitHub…', text: 'Autoriza la aplicación para continuar.' })
-    authService.connectWithGitHub()
-  }
-
-  const handleCancel = () => {
-    setGh(null)
-    setStatus(null)
-  }
-
-  const handlePrimary = () => {
-    if (!gh) {
-      setStatus({ kind: 'err', title: 'Falta GitHub.', text: 'Conecta la cuenta para habilitar la sincronización.' })
-      return
-    }
-    setStatus({ kind: 'ok', title: 'Sincronización activa.', text: 'Comenzamos la primera sincronización de tus repositorios.' })
-  }
+  const handleGithub = onGithub
+  const handleCancel = onCancel
+  const handlePrimary = onPrimary
 
   return (
     <div
@@ -57,7 +53,7 @@ function RegistrarProyectoGit() {
         </div>
         <button
           type="button"
-          onClick={() => setTheme(dark ? 'light' : 'dark')}
+          onClick={() => onThemeChange(dark ? 'light' : 'dark')}
           className={`${btnBase} ${btnGhost} h-[34px] px-[13px] text-[12.5px] gap-[7px]`}
         >
           <span>{dark ? '☀' : '☾'}</span>
@@ -94,11 +90,13 @@ function RegistrarProyectoGit() {
               </span>
               <span className="flex flex-col gap-[5px] max-w-[360px]">
                 <span className="text-[15.5px] font-semibold text-[#16202e] dark:text-[#e8edf6]">
-                  {gh ? `Conectado como @${gh.user}` : 'Conecta tu cuenta de GitHub'}
+                  {account ? `Conectado como @${account.user}` : 'Conecta tu cuenta de GitHub'}
                 </span>
                 <span className="text-[13px] leading-[1.5] text-[#8c98ac] dark:text-[#7a8699]">
-                  {gh
-                    ? `Encontramos ${gh.repos} repositorios. Elegirás cuáles sincronizar en el siguiente paso.`
+                  {account
+                    ? account.repos === undefined
+                      ? 'Tu cuenta está lista para elegir los repositorios que deseas sincronizar.'
+                      : `Encontramos ${account.repos} repositorios. Elegirás cuáles sincronizar en el siguiente paso.`
                     : 'Te llevaremos a GitHub para autorizar el acceso y vincular tus repositorios.'}
                 </span>
               </span>
@@ -107,7 +105,7 @@ function RegistrarProyectoGit() {
                 onClick={handleGithub}
                 className="inline-flex items-center justify-center gap-[10px] h-11 px-[22px] rounded-lg text-[13.5px] font-semibold cursor-pointer transition-opacity bg-[#16202e] dark:bg-[#e8edf6] text-white dark:text-[#111826] border border-[#16202e] dark:border-[#e8edf6] hover:opacity-[0.88]"
               >
-                {gh ? 'Usar otra cuenta' : 'Continuar con GitHub'}
+                {account ? 'Usar otra cuenta' : 'Continuar con GitHub'}
               </button>
             </div>
 
@@ -159,4 +157,4 @@ function RegistrarProyectoGit() {
   )
 }
 
-export default RegistrarProyectoGit
+export default GitHubConnectionPanel

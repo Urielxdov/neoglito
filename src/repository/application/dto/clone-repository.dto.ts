@@ -1,4 +1,4 @@
-import type { CloneRepositoryRequest } from "@neoglito/shared";
+import type { CloneRepositoryRequest } from "@neoglito/shared/repository";
 
 export class CloneRepositoryDto implements CloneRepositoryRequest {
     projectId!: number

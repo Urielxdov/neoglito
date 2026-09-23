@@ -1,17 +1,12 @@
 import { Controller, Get, Query, Redirect, Req, Res, UnauthorizedException, UseGuards } from "@nestjs/common";
-import type { Request, Response } from "express";
+import type { Response } from "express";
 import { ExchangeGithubCodeUseCase } from "../application/exchange_github_code.js";
 import { GetGitHubUserUseCase } from "../application/get_github_user.js";
 import { AuthenticateWithGitHubUseCase } from "../application/authenticate_with_github.js";
 import { AuthUseCase } from "../application/auth.use-case.js";
 import { JwtAuthGuard } from "../infrastructure/passport/jwt-auth.guard.js";
-
-interface AuthenticatedRequest extends Request {
-    user: {
-        id: number
-        username: string
-    }
-}
+import type { AuthenticatedUserResponse } from "@neoglito/shared/auth";
+import type { AuthenticatedRequest } from "../../shared/presentation/http/authenticated-request.js";
 
 
 @Controller('auth')
@@ -31,7 +26,7 @@ export class AuthController{
 
     @Get('me')
     @UseGuards(JwtAuthGuard)
-    me(@Req() request: AuthenticatedRequest) {
+    me(@Req() request: AuthenticatedRequest): AuthenticatedUserResponse {
         return request.user
     }
 

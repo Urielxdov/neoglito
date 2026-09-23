@@ -13,14 +13,19 @@ import { ENCRYPTION_PORT } from "../shared/application/encryption.port.js";
 import { Aes256GcmEncryptionService } from "../shared/infrastructure/security/aes-256-gcm-encryption.service.js";
 import { GIT_CLONER_PORT } from "../shared/application/repository-cloner.port.js";
 import { GitCloneRepositoryService } from "../shared/infrastructure/git/git-repository-cloner.service.js";
+import { AuthModule } from "../auth/auth.module.js";
+import { PassportModule } from "@nestjs/passport";
+import { GetRepositoriesUseCase } from "./application/use-cases/get-repositories.use-case.js";
 
 @Module({
+    imports: [AuthModule, PassportModule.register({ session: false })],
     controllers: [ProjectController, RepositoryController],
     providers: [
         PrismaService,
         CreateProjectUseCase,
         CreateRepositoryUseCase,
         CloneRepositoryUseCase,
+        GetRepositoriesUseCase,
         {
             provide: PROJECT_REPOSITORY,
             useClass: PrismaProjectRepository,

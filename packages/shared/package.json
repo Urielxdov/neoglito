@@ -8,6 +8,18 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts"
     },
+    "./api": {
+      "types": "./src/api/index.ts",
+      "import": "./src/api/index.ts"
+    },
+    "./auth": {
+      "types": "./src/auth/index.ts",
+      "import": "./src/auth/index.ts"
+    },
+    "./repository": {
+      "types": "./src/repository/index.ts",
+      "import": "./src/repository/index.ts"
+    },
     "./package.json": "./package.json"
   }
 }

@@ -1,12 +1,7 @@
 import { apiClient } from '../api/client'
-import type { ApiResponse } from '../api/contracts'
+import type { ApiResponse, AuthenticatedUserResponse } from '../api/contracts'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '')
-
-interface AuthenticatedUser {
-  id: number
-  username: string
-}
 
 export const authService = {
   getGitHubConnectionUrl(): string {
@@ -17,7 +12,7 @@ export const authService = {
     window.location.assign(this.getGitHubConnectionUrl())
   },
 
-  getCurrentUser(): Promise<ApiResponse<AuthenticatedUser>> {
-    return apiClient.get<AuthenticatedUser>('/auth/me')
+  getCurrentUser(): Promise<ApiResponse<AuthenticatedUserResponse>> {
+    return apiClient.get<AuthenticatedUserResponse>('/auth/me')
   },
 }

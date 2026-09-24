@@ -26,16 +26,21 @@ export class RepositoryController {
         return this.createRepositoryUseCase.execute(
             new CreateRepositoryRequest(
                 dto.projectId,
+                dto.id,
+                dto.name,
+                dto.gitUrl,
                 dto.cloneUrl,
-                dto.sshPrivateKey,
-                dto.technology,
             ),
         )
     }
 
     @Post('clone')
-    async cloneRepository(@Body() dto: CloneRepositoryDto): Promise<CloneRepositoryResponse> {
-        const pathSystem = await this.cloneRepositoryUseCase.execute(dto)
+    @UseGuards(JwtAuthGuard)
+    async cloneRepository(
+        @Req() request: AuthenticatedRequest,
+        @Body() dto: CloneRepositoryDto,
+    ): Promise<CloneRepositoryResponse> {
+        const pathSystem = await this.cloneRepositoryUseCase.execute(request.user.id, dto)
         return { pathSystem }
     }
 

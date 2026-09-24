@@ -1,8 +1,12 @@
-import type { ApiResponse, GitHubRepositoryResponse } from '../api/contracts'
+import type { ApiResponse, CreateRepositoryRequest, CreateRepositoryResponse, RepositoryResponse } from '../api/contracts'
 import { apiClient } from '../api/client'
 
 export const repositoryService = {
-  getAll(): Promise<ApiResponse<GitHubRepositoryResponse[]>> {
-    return apiClient.get<GitHubRepositoryResponse[]>('/repository/all')
+  getAll(): Promise<ApiResponse<RepositoryResponse[]>> {
+    return apiClient.get<RepositoryResponse[]>('/repository/all')
+  },
+
+  create(request: CreateRepositoryRequest): Promise<ApiResponse<CreateRepositoryResponse>> {
+    return apiClient.post<CreateRepositoryResponse>('/repository/registry', request)
   },
 }

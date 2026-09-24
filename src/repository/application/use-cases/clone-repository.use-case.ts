@@ -3,82 +3,95 @@ import {
     ConflictException,
     Inject,
     Injectable,
+    NotFoundException,
 } from "@nestjs/common";
+import { access } from "node:fs/promises";
+import { join, relative, resolve } from "node:path";
+import { PrismaService } from "../../../prisma/prisma.service.js";
 import { ENCRYPTION_PORT } from "../../../shared/application/encryption.port.js";
 import type { EncryptionPort } from "../../../shared/application/encryption.port.js";
 import { GIT_CLONER_PORT } from "../../../shared/application/repository-cloner.port.js";
 import type { RepositoryClonerPort } from "../../../shared/application/repository-cloner.port.js";
-import { PROJECT_REPOSITORY, type ProjectRepository } from "../../domain/entities/project.repository.js";
-import { REPOSITORY_REPOSITORY, type RepositoryRepository } from "../../domain/entities/repository.repository.js";
-import { Repository } from "../../domain/entities/repository.entity.js";
 import { CloneRepositoryDto } from "../dto/clone-repository.dto.js";
 
 @Injectable()
 export class CloneRepositoryUseCase {
     constructor(
+        private readonly prisma: PrismaService,
         @Inject(ENCRYPTION_PORT)
         private readonly encryptionService: EncryptionPort,
-        @Inject(PROJECT_REPOSITORY)
-        private readonly projectRepository: ProjectRepository,
-        @Inject(REPOSITORY_REPOSITORY)
-        private readonly repositoryRepository: RepositoryRepository,
         @Inject(GIT_CLONER_PORT)
-        private readonly gitClonerService: RepositoryClonerPort,
+        private readonly repositoryCloner: RepositoryClonerPort,
     ) {}
 
-    async execute(request: CloneRepositoryDto): Promise<string> {
-        const cloneUrl = request.cloneUrl?.trim()
-        const sshPrivateKey = request.sshPrivateKey
-        const technology = request.technology?.trim() || null
+    async execute(userId: number, request: CloneRepositoryDto): Promise<string> {
+        const repositoryName = this.getRepositoryName(request.cloneUrl)
+        const connection = await this.prisma.gitHubConnection.findUnique({
+            where: { userId },
+        })
 
-        if (
-            !Number.isInteger(request.projectId) ||
-            request.projectId <= 0 ||
-            !cloneUrl ||
-            !sshPrivateKey ||
-            !sshPrivateKey.trim()
-        ) {
-            throw new BadRequestException(
-                "projectId, cloneUrl and sshPrivateKey are required",
-            )
+        if (!connection) {
+            throw new NotFoundException("El usuario no tiene una conexión de GitHub")
         }
 
-        await this.projectRepository.findById(request.projectId)
+        const username = connection.username
+        const destination = this.getDestination(username, repositoryName)
 
-        const existingRepository =
-            await this.repositoryRepository.findByProjectIdAndCloneUrl(
-                request.projectId,
-                cloneUrl,
-            )
-
-        if (existingRepository) {
-            throw new ConflictException(
-                "A repository with this cloneUrl already exists for this project",
-            )
+        if (await this.exists(destination)) {
+            throw new ConflictException("El repositorio ya fue clonado para este usuario")
         }
 
-        const pathSystem = await this.gitClonerService.clone(
-            cloneUrl,
-            sshPrivateKey,
-        )
-        const encryptedSshPrivateKey = await this.encryptionService.encrypt(
-            sshPrivateKey,
-        )
-        const now = new Date()
+        const accessToken = await this.encryptionService.decrypt(connection.accessToken)
 
-        await this.repositoryRepository.save(
-            new Repository(
-                undefined,
-                [request.projectId],
-                cloneUrl,
-                encryptedSshPrivateKey,
-                technology,
-                pathSystem,
-                now,
-                now,
-            ),
+        return this.repositoryCloner.clone(
+            request.cloneUrl,
+            username,
+            accessToken,
+            destination,
         )
+    }
 
-        return pathSystem
+    private getRepositoryName(cloneUrl: string): string {
+        try {
+            const url = new URL(cloneUrl)
+            const repositoryName = url.pathname.split("/").filter(Boolean).at(-1)?.replace(/\.git$/, "")
+
+            if (
+                url.protocol !== "https:"
+                || url.hostname !== "github.com"
+                || !repositoryName
+                || !/^[a-zA-Z0-9._-]+$/.test(repositoryName)
+            ) {
+                throw new Error()
+            }
+
+            return repositoryName
+        } catch {
+            throw new BadRequestException("cloneUrl debe ser una URL HTTPS válida de GitHub")
+        }
+    }
+
+    private getDestination(username: string, repositoryName: string): string {
+        if (!/^[a-zA-Z0-9-]+$/.test(username)) {
+            throw new BadRequestException("El username de GitHub no es válido")
+        }
+
+        const repositoriesRoot = resolve(process.cwd(), "repo")
+        const destination = resolve(repositoriesRoot, username, repositoryName)
+
+        if (relative(repositoriesRoot, destination).startsWith("..")) {
+            throw new BadRequestException("La ruta de destino no es válida")
+        }
+
+        return destination
+    }
+
+    private async exists(path: string): Promise<boolean> {
+        try {
+            await access(path)
+            return true
+        } catch {
+            return false
+        }
     }
 }

@@ -4,4 +4,5 @@ export type { CreateRepositoryRequest } from './requests/create-repository.reque
 export type { CloneRepositoryResponse } from './responses/clone-repository.response.js'
 export type { CreateProjectResponse } from './responses/create-project.response.js'
 export type { CreateRepositoryResponse } from './responses/create-repository.response.js'
-export type { GitHubRepositoryResponse } from './responses/github-repository.response.js'
+export type { ProjectRepositoryResponse, ProjectResponse } from './responses/project.response.js'
+export type { RepositoryResponse } from './responses/repository.response.js'

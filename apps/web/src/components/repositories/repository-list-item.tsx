@@ -1,21 +1,22 @@
-export interface GitHubRepository {
-  id: number
-  name: string
-  description: string
-  visibility: 'Privado' | 'Público'
-  language: string
-  updatedAt: string
-}
+import type { Repository } from '../../models/repository'
 
 interface RepositoryListItemProps {
-  repository: GitHubRepository
+  repository: Repository
   selected: boolean
+  projectCount: number
   onSelectionChange(id: number): void
+}
+
+function projectCountLabel(count: number): string {
+  if (count === 0) return 'Sin proyecto'
+  if (count === 1) return 'En 1 proyecto'
+  return `En ${count} proyectos`
 }
 
 export function RepositoryListItem({
   repository,
   selected,
+  projectCount,
   onSelectionChange,
 }: RepositoryListItemProps) {
   return (
@@ -56,12 +57,12 @@ export function RepositoryListItem({
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="truncate font-mono text-[13.5px] font-semibold text-[#16202e] dark:text-[#e8edf6]">
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="min-w-0 truncate font-mono text-[13.5px] font-semibold text-[#16202e] dark:text-[#e8edf6]">
             {repository.name}
           </span>
           <span className="shrink-0 rounded-full border border-[#e0e6ef] px-2 py-[1px] text-[11px] font-semibold text-[#8c98ac] dark:border-[#35435a] dark:text-[#a7b4c8]">
-            {repository.visibility}
+            {repository.private ? 'Privado' : 'Público'}
           </span>
         </span>
         <span className="mt-0.5 block truncate text-[12.5px] text-[#8c98ac] dark:text-[#a7b4c8]">
@@ -70,13 +71,13 @@ export function RepositoryListItem({
         <span className="mt-1 flex items-center gap-2 text-[11.5px] sm:hidden">
           <span className="font-semibold text-[#394b6a] dark:text-[#c1cbe0]">{repository.language}</span>
           <span className="text-[#8c98ac] dark:text-[#7a8699]" aria-hidden="true">·</span>
-          <span className="text-[#8c98ac] dark:text-[#7a8699]">{repository.updatedAt}</span>
+          <span className="text-[#8c98ac] dark:text-[#7a8699]">{projectCountLabel(projectCount)}</span>
         </span>
       </span>
 
       <span className="hidden shrink-0 flex-col items-end gap-1 text-[11.5px] sm:flex">
         <span className="font-semibold text-[#394b6a] dark:text-[#c1cbe0]">{repository.language}</span>
-        <span className="text-[#8c98ac] dark:text-[#7a8699]">{repository.updatedAt}</span>
+        <span className="text-[#8c98ac] dark:text-[#7a8699]">{projectCountLabel(projectCount)}</span>
       </span>
     </label>
   )

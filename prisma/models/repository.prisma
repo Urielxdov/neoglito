@@ -1,10 +1,7 @@
 model Repository {
-  id            Int      @id @default(autoincrement())
-  cloneUrl      String   @unique
-  sshPrivateKey String
-  technology    String?
-  pathSystem    String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  projects      Project[]
+  id       Int       @id
+  name     String
+  gitUrl   String
+  cloneUrl String    @unique
+  projects Project[]
 }

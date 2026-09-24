@@ -27,7 +27,7 @@ services:
         condition: service_healthy # Espera que se acepten conexiones reales
     command: >
       sh -c "npx prisma generate &&
-             npx prisma migrate deploy &&
+             npx prisma db push &&
              npm run start:dev"
 
   postgres:

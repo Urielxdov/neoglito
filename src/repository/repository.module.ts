@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { CreateProjectUseCase } from "./application/use-cases/create-project.use-case.js";
+import { GetProjectsUseCase } from "./application/use-cases/get-projects.use-case.js";
 import { CreateRepositoryUseCase } from "./application/use-cases/create-repository.use-case.js";
 import { CloneRepositoryUseCase } from "./application/use-cases/clone-repository.use-case.js";
 import { PROJECT_REPOSITORY } from "./domain/entities/project.repository.js";
@@ -23,6 +24,7 @@ import { GetRepositoriesUseCase } from "./application/use-cases/get-repositories
     providers: [
         PrismaService,
         CreateProjectUseCase,
+        GetProjectsUseCase,
         CreateRepositoryUseCase,
         CloneRepositoryUseCase,
         GetRepositoriesUseCase,

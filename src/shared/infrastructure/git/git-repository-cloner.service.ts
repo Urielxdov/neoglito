@@ -1,64 +1,76 @@
-import { Injectable } from "@nestjs/common";
-import { RepositoryClonerPort } from "../../application/repository-cloner.port.js";
-import path from "path";
-import * as fs from "fs"
-import * as crypto from "crypto"
-import * as os from "os"
-import { exec } from "child_process";
-
+import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import { spawn } from "node:child_process";
+import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { tmpdir } from "node:os";
+import type { RepositoryClonerPort } from "../../application/repository-cloner.port.js";
 
 @Injectable()
 export class GitCloneRepositoryService implements RepositoryClonerPort {
+    async clone(
+        cloneUrl: string,
+        username: string,
+        accessToken: string,
+        destination: string,
+    ): Promise<string> {
+        const temporaryDirectory = await mkdtemp(join(tmpdir(), "github-clone-"))
+        const askPassPath = join(temporaryDirectory, "askpass.sh")
+        const askPassScript = `#!/bin/sh
+case "$1" in
+  *Username*) printf '%s\\n' "$GIT_USERNAME" ;;
+  *Password*) printf '%s\\n' "$GIT_PASSWORD" ;;
+  *) exit 1 ;;
+esac
+`
 
-    clone(cloneUrl: string, sshPrivateKey: string): Promise<string> {
+        try {
+            await mkdir(dirname(destination), { recursive: true })
+            await writeFile(askPassPath, askPassScript, { mode: 0o700 })
+            await chmod(askPassPath, 0o700)
+            await this.runGitClone(cloneUrl, username, accessToken, destination, askPassPath)
+
+            return destination
+        } finally {
+            await rm(temporaryDirectory, { recursive: true, force: true })
+        }
+    }
+
+    private runGitClone(
+        cloneUrl: string,
+        username: string,
+        accessToken: string,
+        destination: string,
+        askPassPath: string,
+    ): Promise<void> {
         return new Promise((resolve, reject) => {
-            const filesystemRoot = path.parse(process.cwd()).root
-            const externalPath = path.join(filesystemRoot, "repositories")
-
-            fs.mkdirSync(externalPath, { recursive: true })
-
-            // Creacion de ruta temporal unica en el repositorio temporal del OS
-            const tempFilename = `git-key-${crypto.randomBytes(8).toString('hex')}`
-            const tempKeyPath = path.join(os.tmpdir(), tempFilename)
-            
-            try {
-                fs.writeFileSync(tempKeyPath, sshPrivateKey, { mode: 0o600 }) // Permisos estrictos de lectura/escritura durante el proceso
-            } catch (err) {
-                return reject(err)
-            }
-
-            // Construccion del comando SHH seguro
-            // -i apunta a nuestra llave temporal
-            // -o serKnownHostsFile=/dev/null evita guardar huellas en known_hosts
-            // -o StrictHostKeyChecking=no evita bloqueos interactivos si el servidor es nuevo
-            const sshCommand = `ssh -i "${tempKeyPath}" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no`
-            const gitCommand = `git clone "${cloneUrl}" "${externalPath}"`
-
-
-            // Inyeccion de la variable de entorno para esta sesion de git
-            exec(gitCommand, {
+            const git = spawn("git", ["clone", cloneUrl, destination], {
                 env: {
                     ...process.env,
-                    GIT_SSH_COMMAND: sshCommand
-                }
-            }, (error, stdout, stderr) => {
-                try {
-                    if (fs.existsSync(tempKeyPath)) {
-                        fs.unlinkSync(tempKeyPath)
-                    }
-                } catch (cleanupError) {
-                    console.error("Error al limpiar la llave temporal: ", cleanupError)
+                    GIT_ASKPASS: askPassPath,
+                    GIT_USERNAME: username,
+                    GIT_PASSWORD: accessToken,
+                    GIT_TERMINAL_PROMPT: "0",
+                },
+                stdio: ["ignore", "ignore", "pipe"],
+            })
+
+            let stderr = ""
+            git.stderr.on("data", (data: Buffer) => {
+                stderr += data.toString()
+            })
+            git.on("error", () => {
+                reject(new InternalServerErrorException("No fue posible ejecutar Git"))
+            })
+            git.on("close", (code) => {
+                if (code === 0) {
+                    resolve()
+                    return
                 }
 
-                if (error) {
-                    console.error(`Error al clonar el repositorio: ${error.message}`)
-                    return reject(error)
-                }
-
-                console.log(`Repositorio clonado con exito en: ${externalPath} (llave temporal destruida)`)
-                resolve(externalPath)
+                reject(new InternalServerErrorException(
+                    `No fue posible clonar el repositorio: ${stderr.trim()}`,
+                ))
             })
         })
     }
-
 }

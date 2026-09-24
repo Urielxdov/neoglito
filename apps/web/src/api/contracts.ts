@@ -15,5 +15,7 @@ export type {
     CreateProjectResponse,
     CreateRepositoryRequest,
     CreateRepositoryResponse,
-    GitHubRepositoryResponse,
+    ProjectRepositoryResponse,
+    ProjectResponse,
+    RepositoryResponse,
 } from '@neoglito/shared/repository'

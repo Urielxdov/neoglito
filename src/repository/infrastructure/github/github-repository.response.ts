@@ -1,12 +1,11 @@
-import type { IsoDateString } from '../../api/index.js'
-
 export interface GitHubRepositoryResponse {
   id: number
   name: string
   full_name: string
-  description: string | null
   private: boolean
-  visibility?: string
+  description: string | null
   language: string | null
-  updated_at: IsoDateString
+  updated_at: string
+  git_url: string
+  clone_url: string
 }

@@ -48,12 +48,22 @@ export class PrismaProjectRepository implements ProjectRepository {
         return data ? this.toDomain(data) : null
     }
 
+    async findAll(): Promise<Project[]> {
+        const data = await this.prisma.project.findMany({
+            include: { repositories: true },
+            orderBy: { updatedAt: 'desc' },
+        })
+
+        return data.map((project) => this.toDomain(project))
+    }
+
     private toDomain(data: {
         id: number
         name: string
         description: string
         createdAt: Date
         updatedAt: Date
+        repositories?: Array<{ id: number; name: string }>
     }): Project {
         return new Project(
             data.id,
@@ -61,6 +71,7 @@ export class PrismaProjectRepository implements ProjectRepository {
             data.description,
             data.createdAt,
             data.updatedAt,
+            data.repositories?.map((repository) => ({ id: repository.id, name: repository.name })) ?? [],
         )
     }
 }

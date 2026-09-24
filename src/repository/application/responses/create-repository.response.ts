@@ -4,9 +4,8 @@ export class CreateRepositoryResponse implements CreateRepositoryResponseContrac
     constructor(
         public readonly id: number,
         public readonly projectId: number,
+        public readonly name: string,
+        public readonly gitUrl: string,
         public readonly cloneUrl: string,
-        public readonly technology: string | null,
-        public readonly createdAt: string,
-        public readonly updatedAt: string,
     ) {}
 }

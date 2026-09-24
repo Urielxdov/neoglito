@@ -4,6 +4,7 @@ node_modules/
 
 # Archivos de build locales
 dist/
+repo/
 coverage/
 **/dist
 **/coverage

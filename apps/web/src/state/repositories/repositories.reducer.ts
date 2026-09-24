@@ -1,24 +1,23 @@
-import type { GitHubRepositoryResponse } from '../../api/contracts'
-import type { GitHubRepository } from '../../components/repositories/repository-list-item'
+import type { RepositoryResponse } from '../../api/contracts'
+import type { Repository } from '../../models/repository'
 
 export type RepositoriesStatus = 'loading' | 'ready' | 'error'
 
 export interface RepositoriesState {
   status: RepositoriesStatus
-  repositories: GitHubRepository[]
+  repositories: Repository[]
   query: string
   selectedIds: Set<number>
   message: string | null
 }
 
 export type RepositoriesAction =
-  | { type: 'load-succeeded'; repositories: GitHubRepositoryResponse[] }
+  | { type: 'load-succeeded'; repositories: RepositoryResponse[] }
   | { type: 'load-failed'; message: string }
   | { type: 'query-changed'; query: string }
   | { type: 'repository-toggled'; id: number }
   | { type: 'visible-repositories-toggled'; ids: number[] }
   | { type: 'selection-cleared' }
-  | { type: 'analysis-requested' }
 
 export const initialRepositoriesState: RepositoriesState = {
   status: 'loading',
@@ -28,18 +27,20 @@ export const initialRepositoriesState: RepositoriesState = {
   message: null,
 }
 
-function toRepository(repository: GitHubRepositoryResponse): GitHubRepository {
+function toRepository(repository: RepositoryResponse): Repository {
   return {
     id: repository.id,
-    name: repository.full_name || repository.name,
-    description: repository.description ?? 'Sin descripción',
-    visibility: repository.private ? 'Privado' : 'Público',
-    language: repository.language ?? 'Sin lenguaje',
+    name: repository.name,
+    private: repository.private,
+    description: repository.description,
+    language: repository.language,
+    gitUrl: repository.gitUrl,
+    cloneUrl: repository.cloneUrl,
     updatedAt: new Intl.DateTimeFormat('es-MX', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
-    }).format(new Date(repository.updated_at)),
+    }).format(new Date(repository.updatedAt)),
   }
 }
 
@@ -85,12 +86,5 @@ export function repositoriesReducer(
     }
     case 'selection-cleared':
       return { ...state, selectedIds: new Set(), message: null }
-    case 'analysis-requested':
-      return {
-        ...state,
-        message: state.selectedIds.size > 0
-          ? `${state.selectedIds.size} repositorio(s) preparado(s) para análisis.`
-          : 'Selecciona al menos un repositorio para analizar.',
-      }
   }
 }

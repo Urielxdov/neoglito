@@ -12,26 +12,38 @@ export class PrismaRepositoryRepository
 
         async save(repository: Repository): Promise<Repository> {
             const data = repository.id === undefined
-                ? await this.prisma.repository.create({
-                    data: {
-                        projectId: repository.projectId,
+                ? await this.prisma.repository.upsert({
+                    where: { cloneUrl: repository.cloneUrl },
+                    create: {
                         cloneUrl: repository.cloneUrl,
                         sshPrivateKey: repository.sshPrivateKey,
                         technology: repository.technology,
                         pathSystem: repository.pathSystem,
                         createdAt: repository.createdAt,
                         updatedAt: repository.updatedAt,
+                        projects: {
+                            connect: repository.projectIds.map((id) => ({ id })),
+                        },
                     },
+                    update: {
+                        projects: {
+                            connect: repository.projectIds.map((id) => ({ id })),
+                        },
+                    },
+                    include: { projects: true },
                 })
                 : await this.prisma.repository.update({
                     where: { id: repository.id },
                     data: {
-                        projectId: repository.projectId,
                         cloneUrl: repository.cloneUrl,
                         sshPrivateKey: repository.sshPrivateKey,
                         technology: repository.technology,
                         pathSystem: repository.pathSystem,
+                        projects: {
+                            set: repository.projectIds.map((id) => ({ id })),
+                        },
                     },
+                    include: { projects: true },
                 })
 
             return this.toDomain(data)
@@ -40,6 +52,7 @@ export class PrismaRepositoryRepository
         async findById(id: number): Promise<Repository> {
             const data = await this.prisma.repository.findUnique({
                 where: { id },
+                include: { projects: true },
             })
 
             if (!data) {
@@ -55,29 +68,33 @@ export class PrismaRepositoryRepository
         ): Promise<Repository | null> {
             const data = await this.prisma.repository.findUnique({
                 where: {
-                    projectId_cloneUrl: {
-                        projectId,
-                        cloneUrl,
-                    },
+                    cloneUrl,
                 },
+                include: { projects: true },
             })
 
-            return data ? this.toDomain(data) : null
+            if (!data || !data.projects.some((project) => project.id === projectId)) {
+                return null
+            }
+
+            return this.toDomain(data)
         }
 
         private toDomain(data: {
             id: number
-            projectId: number
             cloneUrl: string
             sshPrivateKey: string
             technology: string | null
             pathSystem: string | null
             createdAt: Date
             updatedAt: Date
+            projects: Array<{
+                id: number
+            }>
         }): Repository {
             return new Repository(
                 data.id,
-                data.projectId,
+                data.projects.map((project) => project.id),
                 data.cloneUrl,
                 data.sshPrivateKey,
                 data.technology,

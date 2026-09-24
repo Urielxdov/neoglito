@@ -69,7 +69,7 @@ export class CloneRepositoryUseCase {
         await this.repositoryRepository.save(
             new Repository(
                 undefined,
-                request.projectId,
+                [request.projectId],
                 cloneUrl,
                 encryptedSshPrivateKey,
                 technology,

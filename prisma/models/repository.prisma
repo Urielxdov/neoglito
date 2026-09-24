@@ -1,13 +1,10 @@
 model Repository {
   id            Int      @id @default(autoincrement())
-  projectId     Int
-  cloneUrl      String
+  cloneUrl      String   @unique
   sshPrivateKey String
   technology    String?
   pathSystem    String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  project       Project  @relation(fields: [projectId], references: [id])
-
-  @@unique([projectId, cloneUrl])
+  projects      Project[]
 }

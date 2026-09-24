@@ -66,7 +66,7 @@ export class CreateRepositoryUseCase {
         const repository = await this.repositoryRepository.save(
             new Repository(
                 undefined,
-                request.projectId,
+                [request.projectId],
                 cloneUrl,
                 encryptedSshPrivateKey,
                 technology,
@@ -82,7 +82,7 @@ export class CreateRepositoryUseCase {
 
         return new CreateRepositoryResponse(
             repository.id,
-            repository.projectId,
+            request.projectId,
             repository.cloneUrl,
             repository.technology,
             repository.createdAt.toISOString(),

@@ -14,9 +14,10 @@ interface ProjectDetailModalProps {
   project: Project
   repositories: ProjectDetailRepository[]
   onClose(): void
+  onViewDeploy(): void
 }
 
-export function ProjectDetailModal({ project, repositories, onClose }: ProjectDetailModalProps) {
+export function ProjectDetailModal({ project, repositories, onClose, onViewDeploy }: ProjectDetailModalProps) {
   const count = repositories.length
   const countLabel = count === 1 ? '1 repositorio involucrado' : `${count} repositorios involucrados`
 
@@ -86,13 +87,22 @@ export function ProjectDetailModal({ project, repositories, onClose }: ProjectDe
           <span className="text-[12.5px] text-[#8c98ac] dark:text-[#7a8699]">
             Creado {formatDate(project.createdAt)} · actualizado {formatRelativeTime(project.updatedAt)}
           </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-10 rounded-lg bg-[#2257c4] px-[18px] text-[13px] font-semibold text-white shadow-[0_1px_2px_rgba(34,87,196,0.35)] hover:bg-[#1c489f]"
-          >
-            Cerrar
-          </button>
+          <span className="ml-0 flex gap-[10px] sm:ml-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-10 rounded-lg border border-[#d6dce5] bg-white px-[18px] text-[13px] font-semibold text-[#51607a] hover:bg-[#f1f5f9] dark:border-[#35435a] dark:bg-[#111826] dark:text-[#c1cbe0]"
+            >
+              Cerrar
+            </button>
+            <button
+              type="button"
+              onClick={onViewDeploy}
+              className="h-10 rounded-lg bg-[#2257c4] px-[18px] text-[13px] font-semibold text-white shadow-[0_1px_2px_rgba(34,87,196,0.35)] hover:bg-[#1c489f]"
+            >
+              Ver despliegue →
+            </button>
+          </span>
         </footer>
       </div>
     </div>

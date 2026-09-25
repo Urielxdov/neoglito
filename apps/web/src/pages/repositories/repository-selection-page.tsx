@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
 import { CreateProjectForm } from '../../components/repositories/create-project-form'
+import { InitializingOverlay } from '../../components/repositories/initializing-overlay'
 import { ProjectDetailModal } from '../../components/repositories/project-detail-modal'
 import type { ProjectDetailRepository } from '../../components/repositories/project-detail-modal'
+import { ProjectDetailView } from '../../components/repositories/project-detail-view'
+import type { ProjectDetailRepositoryInfo } from '../../components/repositories/project-detail-view'
 import { ProjectListItem } from '../../components/repositories/project-list-item'
 import { RepositoryListItem } from '../../components/repositories/repository-list-item'
 import { projectService } from '../../services/project.service'
@@ -115,8 +118,11 @@ export default function RepositorySelectionPage() {
 
     const name = projectsState.newName.trim()
     const description = projectsState.newDescription.trim()
+    const repositoriesToLink = selectedRepositories
+    const total = repositoriesToLink.length + 1
 
     projectsDispatch({ type: 'creation-submitting' })
+    projectsDispatch({ type: 'creation-progress', done: 0, total, label: 'Creando proyecto' })
 
     const projectResponse = await projectService.create({ name, description })
 
@@ -130,7 +136,14 @@ export default function RepositorySelectionPage() {
 
     const projectId = projectResponse.data.id
 
-    for (const repository of selectedRepositories) {
+    for (const [index, repository] of repositoriesToLink.entries()) {
+      projectsDispatch({
+        type: 'creation-progress',
+        done: index + 1,
+        total,
+        label: `Vinculando ${shortName(repository.name)}`,
+      })
+
       const linkResponse = await repositoryService.create({
         projectId,
         id: repository.id,
@@ -149,7 +162,7 @@ export default function RepositorySelectionPage() {
       }
     }
 
-    projectsDispatch({ type: 'creation-succeeded' })
+    projectsDispatch({ type: 'creation-succeeded', projectId })
     repositoriesDispatch({ type: 'selection-cleared' })
     await loadProjects()
   }
@@ -168,6 +181,20 @@ export default function RepositorySelectionPage() {
         language: liveRepository?.language ?? 'Desconocido',
         visibility: liveRepository ? (liveRepository.private ? 'Privado' : 'Público') : 'Desconocido',
         shared: others === 0 ? 'Solo aquí' : others === 1 ? 'También en 1 proyecto' : `También en ${others} proyectos`,
+      }
+    })
+    : []
+
+  const activeProject = projectsState.projects.find((project) => project.id === projectsState.activeId) ?? null
+
+  const activeProjectRepositories: ProjectDetailRepositoryInfo[] = activeProject
+    ? activeProject.repositories.map((linkedRepository) => {
+      const liveRepository = repositoriesState.repositories.find((repository) => repository.id === linkedRepository.id)
+
+      return {
+        id: linkedRepository.id,
+        name: liveRepository?.name ?? linkedRepository.name,
+        language: liveRepository?.language ?? 'Desconocido',
       }
     })
     : []
@@ -285,59 +312,88 @@ export default function RepositorySelectionPage() {
           </footer>
         </section>
 
-        <section className="overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
-          <header className="flex items-center gap-[14px] border-b border-[#e6eaf0] px-6 py-5 dark:border-[#253044]">
-            <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[11px] bg-[#eef3fc] text-[#2257c4] dark:bg-[#18243a] dark:text-[#5b8df5]">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-              </svg>
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[17px] font-semibold">Proyectos</span>
-              <span className="mt-0.5 block text-[13px] text-[#8c98ac] dark:text-[#a7b4c8]">
-                {projectsState.projects.length} {projectsState.projects.length === 1 ? 'proyecto' : 'proyectos'} · un repositorio puede estar en varios
-              </span>
-            </span>
-          </header>
+        <section className="relative overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
+          {projectsState.phase === 'detail' && activeProject ? (
+            <ProjectDetailView
+              project={activeProject}
+              repositories={activeProjectRepositories}
+              deployPaths={projectsState.deployPaths}
+              deployEnv={projectsState.deployEnv}
+              openKey={projectsState.openDeployKey}
+              configured={projectsState.configuredProjectIds.has(activeProject.id)}
+              onBack={() => projectsDispatch({ type: 'detail-closed' })}
+              onToggleRow={(key) => projectsDispatch({ type: 'deploy-row-toggled', key })}
+              onPathChange={(key, path) => projectsDispatch({ type: 'deploy-path-changed', key, path })}
+              onEnvAdd={(key) => projectsDispatch({ type: 'deploy-env-row-added', key })}
+              onEnvRemove={(key, index) => projectsDispatch({ type: 'deploy-env-row-removed', key, index })}
+              onEnvChange={(key, index, field, value) => projectsDispatch({ type: 'deploy-env-row-changed', key, index, field, value })}
+              onConfigure={() => projectsDispatch({ type: 'deploy-configured', projectId: activeProject.id })}
+            />
+          ) : (
+            <>
+              <header className="flex items-center gap-[14px] border-b border-[#e6eaf0] px-6 py-5 dark:border-[#253044]">
+                <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[11px] bg-[#eef3fc] text-[#2257c4] dark:bg-[#18243a] dark:text-[#5b8df5]">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+                  </svg>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[17px] font-semibold">Proyectos</span>
+                  <span className="mt-0.5 block text-[13px] text-[#8c98ac] dark:text-[#a7b4c8]">
+                    {projectsState.projects.length} {projectsState.projects.length === 1 ? 'proyecto' : 'proyectos'} · un repositorio puede estar en varios
+                  </span>
+                </span>
+              </header>
 
-          <div className="flex flex-col gap-[14px] p-5 sm:p-7">
-            {projectsState.creating && selectedRepositories.length > 0 && (
-              <CreateProjectForm
-                name={projectsState.newName}
-                description={projectsState.newDescription}
-                nameTaken={nameTaken}
-                selectedRepositoryNames={selectedRepositories.map((repository) => shortName(repository.name))}
-                canCreate={canCreateProject}
-                submitting={projectsState.submitting}
-                onNameChange={(name) => projectsDispatch({ type: 'name-changed', name })}
-                onDescriptionChange={(description) => projectsDispatch({ type: 'description-changed', description })}
-                onCancel={() => projectsDispatch({ type: 'creation-cancelled' })}
-                onCreate={() => void handleCreateProject()}
-              />
-            )}
-
-            {projectsState.message && (
-              <p className="text-[12.5px] text-[#c2410c] dark:text-[#fb923c]">{projectsState.message}</p>
-            )}
-
-            <div className="flex flex-col gap-[10px]">
-              {projectsState.status === 'loading' ? (
-                <p className="px-4 py-8 text-center text-[13px] text-[#8c98ac]">Cargando proyectos...</p>
-              ) : projectsState.projects.length > 0 ? (
-                projectsState.projects.map((project) => (
-                  <ProjectListItem
-                    key={project.id}
-                    project={project}
-                    onOpen={(id) => projectsDispatch({ type: 'project-opened', id })}
+              <div className="flex flex-col gap-[14px] p-5 sm:p-7">
+                {projectsState.creating && selectedRepositories.length > 0 && (
+                  <CreateProjectForm
+                    name={projectsState.newName}
+                    description={projectsState.newDescription}
+                    nameTaken={nameTaken}
+                    selectedRepositoryNames={selectedRepositories.map((repository) => shortName(repository.name))}
+                    canCreate={canCreateProject}
+                    submitting={projectsState.submitting}
+                    onNameChange={(name) => projectsDispatch({ type: 'name-changed', name })}
+                    onDescriptionChange={(description) => projectsDispatch({ type: 'description-changed', description })}
+                    onCancel={() => projectsDispatch({ type: 'creation-cancelled' })}
+                    onCreate={() => void handleCreateProject()}
                   />
-                ))
-              ) : (
-                <p className="rounded-lg border border-dashed border-[#c8d0dc] px-4 py-[34px] text-center text-[13px] text-[#8c98ac] dark:border-[#2e3a51] dark:text-[#7a8699]">
-                  Aún no hay proyectos. Selecciona repositorios y pulsa "Nuevo Proyecto".
-                </p>
-              )}
-            </div>
-          </div>
+                )}
+
+                {projectsState.message && (
+                  <p className="text-[12.5px] text-[#c2410c] dark:text-[#fb923c]">{projectsState.message}</p>
+                )}
+
+                <div className="flex flex-col gap-[10px]">
+                  {projectsState.status === 'loading' ? (
+                    <p className="px-4 py-8 text-center text-[13px] text-[#8c98ac]">Cargando proyectos...</p>
+                  ) : projectsState.projects.length > 0 ? (
+                    projectsState.projects.map((project) => (
+                      <ProjectListItem
+                        key={project.id}
+                        project={project}
+                        onOpen={(id) => projectsDispatch({ type: 'project-opened', id })}
+                      />
+                    ))
+                  ) : (
+                    <p className="rounded-lg border border-dashed border-[#c8d0dc] px-4 py-[34px] text-center text-[13px] text-[#8c98ac] dark:border-[#2e3a51] dark:text-[#7a8699]">
+                      Aún no hay proyectos. Selecciona repositorios y pulsa "Nuevo Proyecto".
+                    </p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {projectsState.progress && (
+            <InitializingOverlay
+              name={projectsState.newName.trim()}
+              done={projectsState.progress.done}
+              total={projectsState.progress.total}
+              label={projectsState.progress.label}
+            />
+          )}
         </section>
       </div>
 
@@ -346,6 +402,7 @@ export default function RepositorySelectionPage() {
           project={openProject}
           repositories={openProjectRepositories}
           onClose={() => projectsDispatch({ type: 'project-closed' })}
+          onViewDeploy={() => projectsDispatch({ type: 'detail-opened', id: openProject.id })}
         />
       )}
     </main>

@@ -7,6 +7,7 @@ services:
     volumes:
       - .:/app # Carpeta actual -> carpeta a la que vamos a mandar el cotenido dentro del contenedor
       - /app/node_modules # aisla el node_modules del contenedor
+      - /var/run/docker.sock:/var/run/docker.sock # Permite usar el daemon de Docker del host
     environment:
       NODE_ENV: development
 

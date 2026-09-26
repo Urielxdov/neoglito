@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { loadEnvFile } from 'node:process';
 import { NestFactory } from '@nestjs/core';
+import { assertDockerIsRunning } from './shared/infrastructure/docker/assert-docker-is-running.js';
 import { ApiExceptionFilter } from './shared/presentation/filters/api-exception.filter.js';
 import { ApiResponseInterceptor } from './shared/presentation/interceptors/api-response.interceptor.js';
 
@@ -8,6 +9,8 @@ async function bootstrap() {
   if (existsSync('.env')) {
     loadEnvFile();
   }
+
+  assertDockerIsRunning();
 
   const { AppModule } = await import('./app.module.js');
   const app = await NestFactory.create(AppModule);

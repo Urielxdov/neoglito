@@ -21,6 +21,7 @@ interface ProjectsPanelProps {
   projectsState: ProjectsState;
   selectedRepositories: Repository[];
   onCreateProject(): void;
+  onOpenProject(id: number): void;
 }
 
 export function ProjectsPanel({
@@ -32,6 +33,7 @@ export function ProjectsPanel({
   projectsState,
   selectedRepositories,
   onCreateProject,
+  onOpenProject,
 }: ProjectsPanelProps) {
   return (
     <section className="relative overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
@@ -142,9 +144,7 @@ export function ProjectsPanel({
                   <ProjectListItem
                     key={project.id}
                     project={project}
-                    onOpen={(id) =>
-                      projectsDispatch({ type: 'project-opened', id })
-                    }
+                    onOpen={onOpenProject}
                   />
                 ))
               ) : (

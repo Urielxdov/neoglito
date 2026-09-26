@@ -1,12 +1,35 @@
-import type { ApiResponse, CreateProjectRequest, CreateProjectResponse, ProjectResponse } from '../api/contracts'
-import { apiClient } from '../api/client'
+import type {
+  ApiResponse,
+  CreateProjectRequest,
+  CreateProjectResponse,
+  InitProjectRequest,
+  InitProjectResponse,
+  ProjectDockerFilesResponse,
+  ProjectResponse,
+} from '../api/contracts';
+import { apiClient } from '../api/client';
 
 export const projectService = {
   getAll(): Promise<ApiResponse<ProjectResponse[]>> {
-    return apiClient.get<ProjectResponse[]>('/project')
+    return apiClient.get<ProjectResponse[]>('/project');
   },
 
-  create(request: CreateProjectRequest): Promise<ApiResponse<CreateProjectResponse>> {
-    return apiClient.post<CreateProjectResponse>('/project/registry', request)
+  create(
+    request: CreateProjectRequest,
+  ): Promise<ApiResponse<CreateProjectResponse>> {
+    return apiClient.post<CreateProjectResponse>('/project/registry', request);
   },
-}
+
+  init(request: InitProjectRequest): Promise<ApiResponse<InitProjectResponse>> {
+    return apiClient.post<InitProjectResponse>('/project/init', request);
+  },
+
+  dockerFilesPath(
+    request: InitProjectRequest,
+  ): Promise<ApiResponse<ProjectDockerFilesResponse>> {
+    return apiClient.post<ProjectDockerFilesResponse>(
+      '/project/docker_files',
+      request,
+    );
+  },
+};

@@ -17,6 +17,7 @@ import {
   getProjectCountByRepositoryId,
   getProjectDeployRepositories,
   getProjectDetailRepositories,
+  getDockerFilePathsByRepositoryId,
   getVisibleRepositories,
   isProjectNameTaken,
 } from './repository-selection.helpers';
@@ -155,6 +156,49 @@ export default function RepositorySelectionPage() {
     [activeProject, repositoriesState.repositories],
   );
 
+  const handleOpenProject = useCallback(
+    async (projectId: number) => {
+      projectsDispatch({ type: 'project-opened', id: projectId });
+
+      const project = projectsState.projects.find(
+        (candidate) => candidate.id === projectId,
+      );
+
+      if (!project) {
+        return;
+      }
+
+      const response = await projectService.dockerFilesPath({ projectId });
+
+      if (!response.success || !response.data) {
+        projectsDispatch({
+          type: 'deploy-paths-discovery-failed',
+          message:
+            response.error?.message ??
+            'No fue posible buscar los archivos Docker del proyecto.',
+        });
+        return;
+      }
+
+      const repositories = repositoriesState.repositories.filter((repository) =>
+        project.repositories.some(
+          (projectRepository) => projectRepository.id === repository.id,
+        ),
+      );
+
+      projectsDispatch({
+        type: 'deploy-paths-discovered',
+        projectId,
+        pathsByRepositoryId: getDockerFilePathsByRepositoryId(
+          repositories,
+          response.data.clonedRepositoryPaths,
+          response.data.dockerFilesPath,
+        ),
+      });
+    },
+    [projectsState.projects, repositoriesState.repositories],
+  );
+
   return (
     <main
       data-theme={theme}
@@ -206,6 +250,7 @@ export default function RepositorySelectionPage() {
           projectsState={projectsState}
           selectedRepositories={selectedRepositories}
           onCreateProject={() => void handleCreateProject()}
+          onOpenProject={(id) => void handleOpenProject(id)}
         />
       </div>
 

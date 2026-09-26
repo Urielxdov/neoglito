@@ -10,11 +10,11 @@ import { CloneRepositoriesUseCase } from '../application/use-cases/clone-reposit
 import { CreateProjectUseCase } from '../application/use-cases/create-project.use-case.js';
 import { GetProjectsUseCase } from '../application/use-cases/get-projects.use-case.js';
 import { InitDeployProjectUseCase } from '../application/use-cases/init-deploy-project.use-case.js';
-
-interface InitProjectResponse {
-  clonedRepositoryPaths: string[];
-  dockerComposePaths: string[];
-}
+import type {
+  InitProjectResponse,
+  ProjectDockerFilesResponse,
+} from '@neoglito/shared/repository';
+import { ExtractEnvironmentVariablesUseCase } from '../../shared/application/extract-environment-variables.use-case.js';
 
 @Controller('project')
 export class ProjectController {
@@ -23,6 +23,7 @@ export class ProjectController {
     private readonly getProjectsUseCase: GetProjectsUseCase,
     private readonly cloneRepositoriesUseCase: CloneRepositoriesUseCase,
     private readonly initDeployProjectUseCase: InitDeployProjectUseCase,
+    private readonly extractEnvironmentVariablesUseCase: ExtractEnvironmentVariablesUseCase,
   ) {}
 
   @Post('registry')
@@ -57,10 +58,48 @@ export class ProjectController {
         ),
       )
     ).flat();
+    const composeAnalyses = (
+      await this.extractEnvironmentVariablesUseCase.execute(dockerComposePaths)
+    ).map((analysis) => ({
+      dockerComposePath: analysis.filePath,
+      environmentVariables: analysis.environmentVariables,
+    }));
 
     return {
       clonedRepositoryPaths,
       dockerComposePaths,
+      composeAnalyses,
+    };
+  }
+
+  @Post('docker_files')
+  @UseGuards(JwtAuthGuard)
+  async dockerFilesPaths(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: InitProjectDto,
+  ): Promise<ProjectDockerFilesResponse> {
+    const clonedRepositoryPaths = await this.cloneRepositoriesUseCase.execute(
+      request.user.id,
+      dto.projectId,
+    );
+    const dockerFilesPath = (
+      await Promise.all(
+        clonedRepositoryPaths.map((repositoryPath) =>
+          this.initDeployProjectUseCase.execute(repositoryPath),
+        ),
+      )
+    ).flat();
+    const composeAnalyses = (
+      await this.extractEnvironmentVariablesUseCase.execute(dockerFilesPath)
+    ).map((analysis) => ({
+      dockerComposePath: analysis.filePath,
+      environmentVariables: analysis.environmentVariables,
+    }));
+
+    return {
+      clonedRepositoryPaths,
+      dockerFilesPath,
+      composeAnalyses,
     };
   }
 }

@@ -1,36 +1,36 @@
-import type { ProjectResponse } from '../../api/contracts'
-import type { Project } from '../../models/project'
+import type { ProjectResponse } from '../../api/contracts';
+import type { Project } from '../../models/project';
 
-export type ProjectsStatus = 'loading' | 'ready' | 'error'
-export type ProjectsPhase = 'list' | 'detail'
+export type ProjectsStatus = 'loading' | 'ready' | 'error';
+export type ProjectsPhase = 'list' | 'detail';
 
 export interface DeployEnvVar {
-  key: string
-  value: string
+  key: string;
+  value: string;
 }
 
 export interface CreationProgress {
-  done: number
-  total: number
-  label: string
+  done: number;
+  total: number;
+  label: string;
 }
 
 export interface ProjectsState {
-  status: ProjectsStatus
-  projects: Project[]
-  creating: boolean
-  submitting: boolean
-  newName: string
-  newDescription: string
-  openId: number | null
-  message: string | null
-  phase: ProjectsPhase
-  activeId: number | null
-  progress: CreationProgress | null
-  openDeployKey: string | null
-  deployPaths: Record<string, string>
-  deployEnv: Record<string, DeployEnvVar[]>
-  configuredProjectIds: Set<number>
+  status: ProjectsStatus;
+  projects: Project[];
+  creating: boolean;
+  submitting: boolean;
+  newName: string;
+  newDescription: string;
+  openId: number | null;
+  message: string | null;
+  phase: ProjectsPhase;
+  activeId: number | null;
+  progress: CreationProgress | null;
+  openDeployKey: string | null;
+  deployPaths: Record<string, string>;
+  deployEnv: Record<string, DeployEnvVar[]>;
+  configuredProjectIds: Set<number>;
 }
 
 export type ProjectsAction =
@@ -52,8 +52,20 @@ export type ProjectsAction =
   | { type: 'deploy-path-changed'; key: string; path: string }
   | { type: 'deploy-env-row-added'; key: string }
   | { type: 'deploy-env-row-removed'; key: string; index: number }
-  | { type: 'deploy-env-row-changed'; key: string; index: number; field: 'key' | 'value'; value: string }
+  | {
+      type: 'deploy-env-row-changed';
+      key: string;
+      index: number;
+      field: 'key' | 'value';
+      value: string;
+    }
   | { type: 'deploy-configured'; projectId: number }
+  | { type: 'deploy-paths-discovery-failed'; message: string }
+  | {
+      type: 'deploy-paths-discovered';
+      projectId: number;
+      pathsByRepositoryId: Record<number, string>;
+    };
 
 export const initialProjectsState: ProjectsState = {
   status: 'loading',
@@ -71,7 +83,7 @@ export const initialProjectsState: ProjectsState = {
   deployPaths: {},
   deployEnv: {},
   configuredProjectIds: new Set(),
-}
+};
 
 function toProject(project: ProjectResponse): Project {
   return {
@@ -81,37 +93,58 @@ function toProject(project: ProjectResponse): Project {
     createdAt: new Date(project.createdAt),
     updatedAt: new Date(project.updatedAt),
     repositories: project.repositories,
-  }
+  };
 }
 
 function projectIdFromKey(key: string): number {
-  return Number(key.split(':')[0])
+  return Number(key.split(':')[0]);
 }
 
-export function projectsReducer(state: ProjectsState, action: ProjectsAction): ProjectsState {
+export function projectsReducer(
+  state: ProjectsState,
+  action: ProjectsAction,
+): ProjectsState {
   switch (action.type) {
     case 'load-succeeded':
       return {
         ...state,
         status: 'ready',
         projects: action.projects.map(toProject),
-      }
+      };
     case 'load-failed':
-      return { ...state, status: 'error', message: action.message }
+      return { ...state, status: 'error', message: action.message };
     case 'creation-opened':
-      return { ...state, creating: true, message: null }
+      return { ...state, creating: true, message: null };
     case 'creation-cancelled':
-      return { ...state, creating: false, newName: '', newDescription: '', message: null }
+      return {
+        ...state,
+        creating: false,
+        newName: '',
+        newDescription: '',
+        message: null,
+      };
     case 'name-changed':
-      return { ...state, newName: action.name }
+      return { ...state, newName: action.name };
     case 'description-changed':
-      return { ...state, newDescription: action.description }
+      return { ...state, newDescription: action.description };
     case 'creation-submitting':
-      return { ...state, submitting: true, message: null, progress: null }
+      return { ...state, submitting: true, message: null, progress: null };
     case 'creation-progress':
-      return { ...state, progress: { done: action.done, total: action.total, label: action.label } }
+      return {
+        ...state,
+        progress: {
+          done: action.done,
+          total: action.total,
+          label: action.label,
+        },
+      };
     case 'creation-failed':
-      return { ...state, submitting: false, message: action.message, progress: null }
+      return {
+        ...state,
+        submitting: false,
+        message: action.message,
+        progress: null,
+      };
     case 'creation-succeeded':
       return {
         ...state,
@@ -123,62 +156,99 @@ export function projectsReducer(state: ProjectsState, action: ProjectsAction): P
         progress: null,
         phase: 'detail',
         activeId: action.projectId,
-      }
+      };
     case 'project-opened':
-      return { ...state, openId: action.id }
+      return { ...state, openId: action.id };
     case 'project-closed':
-      return { ...state, openId: null }
+      return { ...state, openId: null };
     case 'detail-opened':
-      return { ...state, phase: 'detail', activeId: action.id, openId: null, openDeployKey: null }
+      return {
+        ...state,
+        phase: 'detail',
+        activeId: action.id,
+        openId: null,
+        openDeployKey: null,
+      };
     case 'detail-closed':
-      return { ...state, phase: 'list', activeId: null, openDeployKey: null }
+      return { ...state, phase: 'list', activeId: null, openDeployKey: null };
     case 'deploy-row-toggled':
-      return { ...state, openDeployKey: state.openDeployKey === action.key ? null : action.key }
+      return {
+        ...state,
+        openDeployKey: state.openDeployKey === action.key ? null : action.key,
+      };
     case 'deploy-path-changed': {
-      const projectId = projectIdFromKey(action.key)
-      const configuredProjectIds = new Set(state.configuredProjectIds)
-      configuredProjectIds.delete(projectId)
+      const projectId = projectIdFromKey(action.key);
+      const configuredProjectIds = new Set(state.configuredProjectIds);
+      configuredProjectIds.delete(projectId);
 
       return {
         ...state,
         deployPaths: { ...state.deployPaths, [action.key]: action.path },
         configuredProjectIds,
-      }
+      };
     }
+    case 'deploy-paths-discovered': {
+      const deployPaths = { ...state.deployPaths };
+      const configuredProjectIds = new Set(state.configuredProjectIds);
+      configuredProjectIds.delete(action.projectId);
+
+      for (const [repositoryId, path] of Object.entries(
+        action.pathsByRepositoryId,
+      )) {
+        deployPaths[`${action.projectId}:${repositoryId}`] = path;
+      }
+
+      return {
+        ...state,
+        message: null,
+        deployPaths,
+        configuredProjectIds,
+      };
+    }
+    case 'deploy-paths-discovery-failed':
+      return { ...state, message: action.message };
     case 'deploy-env-row-added': {
-      const rows = state.deployEnv[action.key] ?? []
-
-      return {
-        ...state,
-        deployEnv: { ...state.deployEnv, [action.key]: [...rows, { key: '', value: '' }] },
-      }
-    }
-    case 'deploy-env-row-removed': {
-      const rows = state.deployEnv[action.key] ?? []
-
-      return {
-        ...state,
-        deployEnv: { ...state.deployEnv, [action.key]: rows.filter((_, index) => index !== action.index) },
-      }
-    }
-    case 'deploy-env-row-changed': {
-      const rows = state.deployEnv[action.key] ?? []
+      const rows = state.deployEnv[action.key] ?? [];
 
       return {
         ...state,
         deployEnv: {
           ...state.deployEnv,
-          [action.key]: rows.map((row, index) => (
-            index === action.index ? { ...row, [action.field]: action.value } : row
-          )),
+          [action.key]: [...rows, { key: '', value: '' }],
         },
-      }
+      };
+    }
+    case 'deploy-env-row-removed': {
+      const rows = state.deployEnv[action.key] ?? [];
+
+      return {
+        ...state,
+        deployEnv: {
+          ...state.deployEnv,
+          [action.key]: rows.filter((_, index) => index !== action.index),
+        },
+      };
+    }
+    case 'deploy-env-row-changed': {
+      const rows = state.deployEnv[action.key] ?? [];
+
+      return {
+        ...state,
+        deployEnv: {
+          ...state.deployEnv,
+          [action.key]: rows.map((row, index) =>
+            index === action.index
+              ? { ...row, [action.field]: action.value }
+              : row,
+          ),
+        },
+      };
     }
     case 'deploy-configured': {
-      const configuredProjectIds = new Set(state.configuredProjectIds)
-      configuredProjectIds.add(action.projectId)
+      const configuredProjectIds = new Set(state.configuredProjectIds);
+      configuredProjectIds.add(action.projectId);
 
-      return { ...state, configuredProjectIds }
+      return { ...state, configuredProjectIds };
     }
   }
 }

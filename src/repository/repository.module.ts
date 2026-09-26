@@ -18,6 +18,9 @@ import { GIT_CLONER_PORT } from '../shared/application/repository-cloner.port.js
 import { GitCloneRepositoryService } from '../shared/infrastructure/git/git-repository-cloner.service.js';
 import { FILE_FINDER_PORT } from '../shared/application/file-finder.port.js';
 import { RecursiveFileFinderService } from '../shared/infrastructure/files/recursive-file-finder.service.js';
+import { ENVIROMENT_VARIABLE_EXTRACT_PORT } from '../shared/application/enviroment-variable-extract.port.js';
+import { ExtractEnvironmentVariablesUseCase } from '../shared/application/extract-environment-variables.use-case.js';
+import { YamlComposeEnviromentVariableExtractService } from '../shared/infrastructure/compose/yaml-compose-enviroment-variable-extract.service.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { PassportModule } from '@nestjs/passport';
 import { GetRepositoriesUseCase } from './application/use-cases/get-repositories.use-case.js';
@@ -33,8 +36,10 @@ import { GetRepositoriesUseCase } from './application/use-cases/get-repositories
     CloneRepositoryUseCase,
     CloneRepositoriesUseCase,
     InitDeployProjectUseCase,
+    ExtractEnvironmentVariablesUseCase,
     GetRepositoriesUseCase,
     RecursiveFileFinderService,
+    YamlComposeEnviromentVariableExtractService,
     {
       provide: PROJECT_REPOSITORY,
       useClass: PrismaProjectRepository,
@@ -54,6 +59,10 @@ import { GetRepositoriesUseCase } from './application/use-cases/get-repositories
     {
       provide: FILE_FINDER_PORT,
       useExisting: RecursiveFileFinderService,
+    },
+    {
+      provide: ENVIROMENT_VARIABLE_EXTRACT_PORT,
+      useExisting: YamlComposeEnviromentVariableExtractService,
     },
   ],
 })

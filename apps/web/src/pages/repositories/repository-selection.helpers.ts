@@ -2,6 +2,15 @@ import type { ProjectDetailRepository } from '../../components/repositories/proj
 import type { ProjectDetailRepositoryInfo } from '../../components/repositories/project-detail-view';
 import type { Project } from '../../models/project';
 import type { Repository } from '../../models/repository';
+import { shortName } from '../../utils/repository-name';
+
+function normalizePath(path: string): string {
+  return path.replace(/\\/g, '/').replace(/\/$/, '');
+}
+
+function getPathBasename(path: string): string {
+  return normalizePath(path).split('/').filter(Boolean).at(-1) ?? '';
+}
 
 export function getVisibleRepositories(
   repositories: Repository[],
@@ -92,4 +101,42 @@ export function isProjectNameTaken(projects: Project[], name: string): boolean {
       (project) => project.name.trim().toLowerCase() === normalizedName,
     )
   );
+}
+
+export function getDockerFilePathsByRepositoryId(
+  repositories: Repository[],
+  clonedRepositoryPaths: string[],
+  dockerFilesPath: string[],
+): Record<number, string> {
+  const pathsByRepositoryId: Record<number, string> = {};
+  const normalizedClonedPaths = clonedRepositoryPaths.map((path) => ({
+    original: path,
+    normalized: normalizePath(path),
+    name: getPathBasename(path).toLowerCase(),
+  }));
+  const normalizedDockerFilesPath = dockerFilesPath.map((path) => ({
+    original: path,
+    normalized: normalizePath(path),
+  }));
+
+  for (const repository of repositories) {
+    const repositoryName = shortName(repository.name).toLowerCase();
+    const clonedRepositoryPath = normalizedClonedPaths.find(
+      (path) => path.name === repositoryName,
+    );
+
+    if (!clonedRepositoryPath) {
+      continue;
+    }
+
+    const dockerFilePath = normalizedDockerFilesPath.find((path) =>
+      path.normalized.startsWith(`${clonedRepositoryPath.normalized}/`),
+    );
+
+    if (dockerFilePath) {
+      pathsByRepositoryId[repository.id] = dockerFilePath.original;
+    }
+  }
+
+  return pathsByRepositoryId;
 }

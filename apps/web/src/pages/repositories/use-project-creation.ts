@@ -9,6 +9,7 @@ import type {
 import type { RepositoriesAction } from '../../state/repositories/repositories.reducer';
 import { projectService } from '../../services/project.service';
 import { shortName } from '../../utils/repository-name';
+import { getDockerFilePathsByRepositoryId } from './repository-selection.helpers';
 
 interface UseProjectCreationOptions {
   canCreateProject: boolean;
@@ -44,7 +45,7 @@ export function useProjectCreation({
     const name = projectsState.newName.trim();
     const description = projectsState.newDescription.trim();
     const repositoriesToLink = selectedRepositories;
-    const total = repositoriesToLink.length + 1;
+    const total = repositoriesToLink.length + 2;
 
     projectsDispatch({ type: 'creation-submitting' });
     projectsDispatch({
@@ -93,6 +94,35 @@ export function useProjectCreation({
       }
     }
 
+    projectsDispatch({
+      type: 'creation-progress',
+      done: repositoriesToLink.length + 1,
+      total,
+      label: 'Buscando docker-compose',
+    });
+
+    const initResponse = await projectService.init({ projectId });
+
+    if (!initResponse.success || !initResponse.data) {
+      projectsDispatch({
+        type: 'creation-failed',
+        message:
+          initResponse.error?.message ??
+          'El proyecto se creó, pero no fue posible inicializar el despliegue.',
+      });
+      await loadProjects();
+      return;
+    }
+
+    projectsDispatch({
+      type: 'deploy-paths-discovered',
+      projectId,
+      pathsByRepositoryId: getDockerFilePathsByRepositoryId(
+        repositoriesToLink,
+        initResponse.data.clonedRepositoryPaths,
+        initResponse.data.dockerComposePaths,
+      ),
+    });
     projectsDispatch({ type: 'creation-succeeded', projectId });
     repositoriesDispatch({ type: 'selection-cleared' });
     await loadProjects();

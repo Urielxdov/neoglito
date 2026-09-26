@@ -20,7 +20,9 @@ import {
   getGitHubCallbackUrl,
   getGitHubClientId,
 } from '../application/github-oauth.config.js';
+import { ApiBearerAuth, ApiFoundResponse, ApiOkResponse, ApiOperation, ApiQuery, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -30,17 +32,21 @@ export class AuthController {
     private readonly authUseCase: AuthUseCase,
   ) {}
 
-  @Get()
-  auth() {}
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Retorna el nombre de usuario del usuario autenticado' })
+  @ApiOkResponse({ description: 'Usuario autenticado' })
+  @ApiUnauthorizedResponse({ description: 'No autenticado' })
   me(@Req() request: AuthenticatedRequest): AuthenticatedUserResponse {
     return request.user;
   }
 
   @Get('github')
   @Redirect()
+  @ApiOperation({ summary: 'Redirige al OAuth de github' })
+  @ApiFoundResponse({ description: 'Redireccion a Github OAuth' })
   github() {
     const params = new URLSearchParams({
       client_id: getGitHubClientId(),
@@ -55,6 +61,10 @@ export class AuthController {
 
   @Get('github/callback')
   @Redirect()
+  @ApiOperation({ summary: 'Callback OAuth de Github' })
+  @ApiQuery({ name: 'code', required: true})
+  @ApiFoundResponse({ description: 'Redireccion al frontendcon cookie de sesion' })
+  @ApiUnauthorizedResponse({ description: 'No fue posible realizar la autorizacion del usuario' })
   async githubCallback(
     @Query('code') code: string,
     @Res({ passthrough: true }) response: Response,

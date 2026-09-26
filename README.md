@@ -191,3 +191,7 @@ Neoglito actualmente cuenta con la base funcional para autenticacion, gestion de
 ## Licencia
 
 Este proyecto esta marcado como `UNLICENSED` en `package.json`.
+
+## Nota
+Este codigo puede tener comentarios ajenos al codigo dado que lo realizo en gran medida a modo de 
+aprendizaje, en caso de notar comentarios pedagogicos, simplemente ignorarlos

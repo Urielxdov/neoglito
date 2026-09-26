@@ -15,7 +15,9 @@ import type {
   ProjectDockerFilesResponse,
 } from '@neoglito/shared/repository';
 import { ExtractEnvironmentVariablesUseCase } from '../../shared/application/extract-environment-variables.use-case.js';
+import { ApiFoundResponse, ApiOkResponse, ApiOperation, ApiQuery, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
 
+@ApiTags('Project')
 @Controller('project')
 export class ProjectController {
   constructor(
@@ -27,6 +29,9 @@ export class ProjectController {
   ) {}
 
   @Post('registry')
+  @ApiOperation({ description: 'Crea un proyecto para analizar los dockers' })
+  @ApiOkResponse({ description: 'Correcta creacion del proyecto e identificacion de los repositorios' })
+  @ApiQuery({ name: 'dto', required: true })
   async registryProject(
     @Body() dto: CreateProjectDto,
   ): Promise<CreateProjectResponse> {
@@ -37,12 +42,20 @@ export class ProjectController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ description: 'Obtiene todos los repositorios asociados al usuario logeado' })
+  @ApiFoundResponse({ description: 'Informacion de los repositorios del usuario' })
+  @ApiUnauthorizedResponse({ description: 'No hay cookies para el usuario' })
   async all(): Promise<ProjectResponse[]> {
     return this.getProjectsUseCase.execute();
   }
 
   @Post('init')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ description: 'Registra un proyecto en el backend y crea sus realaciones' })
+  @ApiQuery({ name: 'request', description: 'Posee el contenido de la peticion HTTP en conjunto a la cookie de usuario' })
+  @ApiQuery({ name: 'dto', description: 'Nombre y descripcion del proyecto asi como las relaciones de repositorios que posee' })
+  @ApiFoundResponse({ description: 'Creacion del proyecto y correcta asociacion de los repositorios' })
+  @ApiUnauthorizedResponse({ description: 'No hay cookie valida en la peticion' })
   async initProject(
     @Req() request: AuthenticatedRequest,
     @Body() dto: InitProjectDto,
@@ -74,6 +87,10 @@ export class ProjectController {
 
   @Post('docker_files')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ description: 'Busca las rutas de los dockers dentro del repositorio clonado' })
+  @ApiQuery({ name: 'request', description: 'cookie de usuario para credenciales' })
+  @ApiQuery({ name: 'dto', description: 'Id del proyecto a buscar' })
+  @ApiUnauthorizedResponse({ description: 'Sin cookies de logeo' })
   async dockerFilesPaths(
     @Req() request: AuthenticatedRequest,
     @Body() dto: InitProjectDto,

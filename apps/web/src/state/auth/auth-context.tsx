@@ -1,41 +1,20 @@
 import { createContext, useContext, useEffect, useReducer } from 'react'
 import type { PropsWithChildren } from 'react'
-import type { AuthenticatedUserResponse } from "@neoglito/web/api/contracts"
 import { authService } from "@neoglito/web/services/auth.service"
-
-type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
-
-interface AuthState {
-  status: AuthStatus
-  user: AuthenticatedUserResponse | null
-}
-
-type AuthAction =
-  | { type: 'authenticated'; user: AuthenticatedUserResponse }
-  | { type: 'unauthenticated' }
+import {
+  authReducer,
+  initialAuthState,
+  type AuthState,
+} from "@neoglito/web/state/auth/auth.reducer"
 
 interface AuthContextValue extends AuthState {
   refresh(): Promise<void>
 }
 
-const initialState: AuthState = {
-  status: 'loading',
-  user: null,
-}
-
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-function authReducer(_state: AuthState, action: AuthAction): AuthState {
-  switch (action.type) {
-    case 'authenticated':
-      return { status: 'authenticated', user: action.user }
-    case 'unauthenticated':
-      return { status: 'unauthenticated', user: null }
-  }
-}
-
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [state, dispatch] = useReducer(authReducer, initialState)
+  const [state, dispatch] = useReducer(authReducer, initialAuthState)
 
   const refresh = async () => {
     const response = await authService.getCurrentUser()

@@ -1,7 +1,9 @@
 import type { ProjectDetailRepository } from "@neoglito/web/components/repositories/project-detail-modal";
 import type { ProjectDetailRepositoryInfo } from "@neoglito/web/components/repositories/project-detail-view";
+import type { ProjectDockerFilesResponse } from "@neoglito/web/api/contracts";
 import type { Project } from "@neoglito/web/models/project";
 import type { Repository } from "@neoglito/web/models/repository";
+import type { DeployEnvVar } from "@neoglito/web/state/projects/projects.reducer";
 import { shortName } from "@neoglito/web/utils/repository-name";
 
 function normalizePath(path: string): string {
@@ -162,4 +164,48 @@ export function getDockerFilePathsByRepositoryId(
   }
 
   return pathsByRepositoryId;
+}
+
+export function getEnvironmentVariablesByRepositoryId(
+  repositories: Repository[],
+  clonedRepositoryPaths: string[],
+  composeAnalyses: ProjectDockerFilesResponse['composeAnalyses'],
+): Record<number, DeployEnvVar[]> {
+  const envByRepositoryId: Record<number, DeployEnvVar[]> = {};
+  const normalizedClonedPaths = clonedRepositoryPaths.map((path) => ({
+    normalized: normalizePath(path),
+    name: getPathBasename(path).toLowerCase(),
+  }));
+  const normalizedComposeAnalyses = composeAnalyses.map((analysis) => ({
+    ...analysis,
+    normalized: normalizePath(analysis.dockerComposePath),
+  }));
+
+  for (const repository of repositories) {
+    const repositoryName = shortName(repository.name).toLowerCase();
+    const clonedRepositoryPath = normalizedClonedPaths.find(
+      (path) => path.name === repositoryName,
+    );
+
+    if (!clonedRepositoryPath) {
+      continue;
+    }
+
+    const env = normalizedComposeAnalyses
+      .filter((analysis) =>
+        analysis.normalized.startsWith(`${clonedRepositoryPath.normalized}/`),
+      )
+      .flatMap((analysis) =>
+        analysis.environmentVariables.map((variable) => ({
+          key: variable.name,
+          value: variable.value ?? variable.defaultValue ?? '',
+        })),
+      );
+
+    if (env.length > 0) {
+      envByRepositoryId[repository.id] = env;
+    }
+  }
+
+  return envByRepositoryId;
 }

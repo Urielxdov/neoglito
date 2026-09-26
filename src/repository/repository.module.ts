@@ -24,6 +24,8 @@ import { YamlComposeEnviromentVariableExtractService } from '../shared/infrastru
 import { AuthModule } from '../auth/auth.module.js';
 import { PassportModule } from '@nestjs/passport';
 import { GetRepositoriesUseCase } from './application/use-cases/get-repositories.use-case.js';
+import { CONTAINER_RUNTIME_PORT } from '../shared/application/container-runtime.port.js';
+import { DockerComposeRuntime } from '../shared/infrastructure/docker/docker-compose-runtime.service.js';
 
 @Module({
   imports: [AuthModule, PassportModule.register({ session: false })],
@@ -40,6 +42,7 @@ import { GetRepositoriesUseCase } from './application/use-cases/get-repositories
     GetRepositoriesUseCase,
     RecursiveFileFinderService,
     YamlComposeEnviromentVariableExtractService,
+    DockerComposeRuntime,
     {
       provide: PROJECT_REPOSITORY,
       useClass: PrismaProjectRepository,
@@ -63,6 +66,10 @@ import { GetRepositoriesUseCase } from './application/use-cases/get-repositories
     {
       provide: ENVIROMENT_VARIABLE_EXTRACT_PORT,
       useExisting: YamlComposeEnviromentVariableExtractService,
+    },
+    {
+      provide: CONTAINER_RUNTIME_PORT,
+      useExisting: DockerComposeRuntime,
     },
   ],
 })

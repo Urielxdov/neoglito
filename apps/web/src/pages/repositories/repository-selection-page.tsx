@@ -21,6 +21,7 @@ import {
   getProjectDetailRepositories,
   getDockerFileCandidatesByRepositoryId,
   getDockerFilePathsByRepositoryId,
+  getEnvironmentVariablesByRepositoryId,
   getVisibleRepositories,
   isProjectNameTaken,
 } from "@neoglito/web/pages/repositories/repository-selection.helpers";
@@ -171,7 +172,7 @@ export default function RepositorySelectionPage() {
         return;
       }
 
-      const response = await projectService.dockerFilesPath({ projectId });
+      const response = await projectService.environmentVariables({ projectId });
 
       if (!response.success || !response.data) {
         projectsDispatch({
@@ -201,6 +202,15 @@ export default function RepositorySelectionPage() {
           repositories,
           response.data.clonedRepositoryPaths,
           response.data.dockerFilesPath,
+        ),
+      });
+      projectsDispatch({
+        type: 'deploy-env-discovered',
+        projectId,
+        envByRepositoryId: getEnvironmentVariablesByRepositoryId(
+          repositories,
+          response.data.clonedRepositoryPaths,
+          response.data.composeAnalyses,
         ),
       });
     },

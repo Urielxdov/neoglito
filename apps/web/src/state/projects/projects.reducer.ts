@@ -66,6 +66,11 @@ export type ProjectsAction =
   | { type: 'deploy-configured'; projectId: number }
   | { type: 'deploy-paths-discovery-failed'; message: string }
   | {
+      type: 'deploy-env-discovered';
+      projectId: number;
+      envByRepositoryId: Record<number, DeployEnvVar[]>;
+    }
+  | {
       type: 'deploy-paths-discovered';
       projectId: number;
       pathsByRepositoryId: Record<number, string>;
@@ -268,6 +273,19 @@ export function projectsReducer(
           ),
         },
       };
+    }
+    case 'deploy-env-discovered': {
+      const deployEnv = { ...state.deployEnv };
+      const configuredProjectIds = new Set(state.configuredProjectIds);
+      configuredProjectIds.delete(action.projectId);
+
+      for (const [repositoryId, env] of Object.entries(
+        action.envByRepositoryId,
+      )) {
+        deployEnv[`${action.projectId}:${repositoryId}`] = env;
+      }
+
+      return { ...state, deployEnv, configuredProjectIds };
     }
     case 'deploy-configured': {
       const configuredProjectIds = new Set(state.configuredProjectIds);

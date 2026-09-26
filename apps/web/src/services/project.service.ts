@@ -32,4 +32,13 @@ export const projectService = {
       request,
     );
   },
+
+  environmentVariables(
+    request: InitProjectRequest,
+  ): Promise<ApiResponse<ProjectDockerFilesResponse>> {
+    return apiClient.post<ProjectDockerFilesResponse>(
+      '/project/docker_files',
+      request,
+    );
+  },
 };

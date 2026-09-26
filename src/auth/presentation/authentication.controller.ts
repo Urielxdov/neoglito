@@ -20,7 +20,11 @@ import {
   getGitHubCallbackUrl,
   getGitHubClientId,
 } from '../application/github-oauth.config.js';
-import { ApiBearerAuth, ApiFoundResponse, ApiOkResponse, ApiOperation, ApiQuery, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import { getSchemaPath, ApiBearerAuth, ApiFoundResponse, ApiOperation, ApiQuery, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import {
+  ApiSuccessResponseDoc,
+  AuthenticatedUserSchema,
+} from '../../shared/presentation/swagger/api-response.schemas.js';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -30,14 +34,19 @@ export class AuthController {
     private readonly getGitHubUserUseCase: GetGitHubUserUseCase,
     private readonly authenticateWithGitHubUseCase: AuthenticateWithGitHubUseCase,
     private readonly authUseCase: AuthUseCase,
-  ) {}
+  ) { }
 
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Retorna el nombre de usuario del usuario autenticado' })
-  @ApiOkResponse({ description: 'Usuario autenticado' })
+  @ApiSuccessResponseDoc({
+    status: 200,
+    description: 'Usuario autenticado',
+    dataSchema: { $ref: getSchemaPath(AuthenticatedUserSchema) },
+    extraModels: [AuthenticatedUserSchema],
+  })
   @ApiUnauthorizedResponse({ description: 'No autenticado' })
   me(@Req() request: AuthenticatedRequest): AuthenticatedUserResponse {
     return request.user;
@@ -46,7 +55,15 @@ export class AuthController {
   @Get('github')
   @Redirect()
   @ApiOperation({ summary: 'Redirige al OAuth de github' })
-  @ApiFoundResponse({ description: 'Redireccion a Github OAuth' })
+  @ApiFoundResponse({
+    description: 'Redireccion a Github OAuth',
+    headers: {
+      Location: {
+        description: 'URL de autorizacion de GitHub',
+        schema: { type: 'string', format: 'uri' },
+      },
+    },
+  })
   github() {
     const params = new URLSearchParams({
       client_id: getGitHubClientId(),
@@ -62,8 +79,20 @@ export class AuthController {
   @Get('github/callback')
   @Redirect()
   @ApiOperation({ summary: 'Callback OAuth de Github' })
-  @ApiQuery({ name: 'code', required: true})
-  @ApiFoundResponse({ description: 'Redireccion al frontendcon cookie de sesion' })
+  @ApiQuery({ name: 'code', required: true })
+  @ApiFoundResponse({
+    description: 'Redireccion al frontend con cookie de sesion',
+    headers: {
+      Location: {
+        description: 'URL del frontend',
+        schema: { type: 'string', format: 'uri' },
+      },
+      'Set-Cookie': {
+        description: 'Cookie de sesion HttpOnly',
+        schema: { type: 'string' },
+      },
+    },
+  })
   @ApiUnauthorizedResponse({ description: 'No fue posible realizar la autorizacion del usuario' })
   async githubCallback(
     @Query('code') code: string,

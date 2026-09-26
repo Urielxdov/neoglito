@@ -1,5 +1,7 @@
+import { GitBranch, Search } from 'lucide';
 import type { Repository } from '../../models/repository';
 import type { RepositoriesState } from '../../state/repositories/repositories.reducer';
+import { AppIcon } from '../ui/app-icon';
 import { RepositoryListItem } from './repository-list-item';
 
 interface RepositorySelectionPanelProps {
@@ -28,18 +30,10 @@ export function RepositorySelectionPanel({
   onVisibleRepositoriesToggle,
 }: RepositorySelectionPanelProps) {
   return (
-    <section className="overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
-      <header className="flex items-center gap-[14px] border-b border-[#e6eaf0] px-6 py-5 dark:border-[#253044]">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
+      <header className="flex shrink-0 items-center gap-[14px] border-b border-[#e6eaf0] px-6 py-5 dark:border-[#253044]">
         <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[11px] bg-[#eef3fc] text-[#2257c4] dark:bg-[#18243a] dark:text-[#5b8df5]">
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.4 7.4 0 0 1 8 3.5c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8 8 0 0 0 8 0Z" />
-          </svg>
+          <AppIcon icon={GitBranch} size={22} />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[17px] font-semibold">
@@ -52,22 +46,15 @@ export function RepositorySelectionPanel({
         </span>
       </header>
 
-      <div className="p-5 sm:p-7">
-        <div className="flex flex-wrap gap-[10px]">
+      <div className="flex min-h-0 flex-1 flex-col p-5 sm:p-7">
+        <div className="flex shrink-0 flex-wrap gap-[10px]">
           <label className="flex h-[42px] min-w-[220px] flex-1 items-center gap-3 rounded-lg border border-[#d6dce5] px-4 text-[#8c98ac] dark:border-[#35435a] dark:bg-[#0c121d]">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              aria-hidden="true"
+            <AppIcon
+              icon={Search}
+              size={16}
+              strokeWidth={1.8}
               className="shrink-0"
-            >
-              <circle cx="11" cy="11" r="6" />
-              <path d="m20 20-4.2-4.2" />
-            </svg>
+            />
             <input
               value={repositoriesState.query}
               onChange={(event) => onQueryChange(event.target.value)}
@@ -90,7 +77,7 @@ export function RepositorySelectionPanel({
           </button>
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-lg border border-[#e0e6ef] dark:border-[#253044]">
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto rounded-lg border border-[#e0e6ef] dark:border-[#253044]">
           {repositoriesState.status === 'loading' ? (
             <p className="px-4 py-8 text-center text-[13px] text-[#8c98ac]">
               Cargando repositorios...
@@ -121,7 +108,7 @@ export function RepositorySelectionPanel({
         </div>
       </div>
 
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e6eaf0] bg-[#f8fafc] px-6 py-4 sm:flex-nowrap dark:border-[#253044] dark:bg-[#0c121d]">
+      <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[#e6eaf0] bg-[#f8fafc] px-6 py-4 sm:flex-nowrap dark:border-[#253044] dark:bg-[#0c121d]">
         <span className="text-[12.5px] text-[#8c98ac] dark:text-[#7a8699]">
           {repositoriesState.selectedIds.size === 0
             ? 'Selecciona al menos un repositorio.'

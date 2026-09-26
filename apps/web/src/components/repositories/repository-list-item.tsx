@@ -1,4 +1,6 @@
+import { Check } from 'lucide'
 import type { Repository } from '../../models/repository'
+import { AppIcon } from '../ui/app-icon'
 
 interface RepositoryListItemProps {
   repository: Repository
@@ -39,21 +41,14 @@ export function RepositoryListItem({
           selected
             ? 'border-[#2257c4] bg-[#2257c4] dark:border-[#5b8df5] dark:bg-[#5b8df5]'
             : 'border-[#c4ccd8] bg-white dark:border-[#3b4860] dark:bg-[#1a2334]'
-        }`}
+          }`}
       >
-        <svg
-          width="11"
-          height="11"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        <AppIcon
+          icon={Check}
+          size={11}
+          strokeWidth={3.5}
           className={`text-white transition-opacity ${selected ? 'opacity-100' : 'opacity-0'}`}
-        >
-          <path d="M20 6 9 17l-5-5" />
-        </svg>
+        />
       </span>
 
       <span className="min-w-0 flex-1">

@@ -1,4 +1,6 @@
+import { Code, X } from 'lucide'
 import type { DeployEnvVar } from '../../state/projects/projects.reducer'
+import { AppIcon } from '../ui/app-icon'
 
 interface DeployPathDrawerProps {
   repositoryName: string
@@ -38,18 +40,7 @@ export function DeployPathDrawer({
       >
         <div className="flex items-center gap-[14px] border-b border-[#e6eaf0] px-7 py-[22px] dark:border-[#253044]">
           <span className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-[10px] bg-[#eef3fc] text-[#2257c4] dark:bg-[#18243a] dark:text-[#5b8df5]">
-            <svg
-              width="17"
-              height="17"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m8 7-5 5 5 5M16 7l5 5-5 5" />
-            </svg>
+            <AppIcon icon={Code} size={17} />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[16px] font-semibold text-[#16202e] dark:text-[#e8edf6]">
@@ -65,17 +56,7 @@ export function DeployPathDrawer({
             aria-label="Cerrar"
             className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-lg border border-[#d6dce5] bg-white text-[#51607a] hover:bg-[#f1f5f9] dark:border-[#35435a] dark:bg-[#111826] dark:text-[#a7b4c8] dark:hover:bg-[#1a2334]"
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-            >
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
+            <AppIcon icon={X} size={14} strokeWidth={2.2} />
           </button>
         </div>
 
@@ -150,17 +131,7 @@ export function DeployPathDrawer({
                     aria-label="Eliminar variable"
                     className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#d6dce5] bg-white text-[#8c98ac] hover:bg-[#f1f5f9] dark:border-[#35435a] dark:bg-[#111826] dark:text-[#7a8699]"
                   >
-                    <svg
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                    >
-                      <path d="M18 6 6 18M6 6l12 12" />
-                    </svg>
+                    <AppIcon icon={X} size={13} strokeWidth={2.2} />
                   </button>
                 </div>
               ))}

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import { Moon, Sun } from 'lucide';
 import { ProjectDetailModal } from '../../components/repositories/project-detail-modal';
 import { ProjectsPanel } from '../../components/repositories/projects-panel';
 import { RepositorySelectionPanel } from '../../components/repositories/repository-selection-panel';
+import { AppIcon } from '../../components/ui/app-icon';
 import { projectService } from '../../services/project.service';
 import { repositoryService } from '../../services/repository.service';
 import { useAuth } from '../../state/auth/auth-context';
@@ -208,9 +210,9 @@ export default function RepositorySelectionPage() {
   return (
     <main
       data-theme={theme}
-      className="min-h-screen bg-[#f8fafc] px-6 pb-20 pt-14 font-sans text-[#16202e] dark:bg-[#0c121d] dark:text-[#e8edf6]"
+      className="flex h-screen flex-col overflow-hidden bg-[#f8fafc] px-6 pt-6 pb-6 font-sans text-[#16202e] dark:bg-[#0c121d] dark:text-[#e8edf6]"
     >
-      <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between gap-4">
+      <div className="flex w-full shrink-0 items-center justify-between gap-4">
         <span className="text-[13px] font-semibold uppercase tracking-[0.09em] text-[#8c98ac] dark:text-[#7a8699]">
           Repositorios y proyectos
         </span>
@@ -219,13 +221,13 @@ export default function RepositorySelectionPage() {
           onClick={() => setTheme(dark ? 'light' : 'dark')}
           className="inline-flex h-[34px] items-center gap-2 rounded-lg border border-[#d6dce5] bg-white px-[13px] text-[12.5px] font-semibold text-[#51607a] transition-colors hover:bg-[#f1f5f9] dark:border-[#2e3a51] dark:bg-[#111826] dark:text-[#a7b4c8] dark:hover:bg-[#1a2334]"
         >
-          <span>{dark ? '☀' : '☾'}</span>
+          <AppIcon icon={dark ? Sun : Moon} size={15} />
           <span>{dark ? 'Modo claro' : 'Modo oscuro'}</span>
         </button>
       </div>
 
       {projectsState.phase === 'detail' ? (
-        <div className="mx-auto mt-[22px] w-full max-w-[880px]">
+        <div className="mx-auto mt-[22px] min-h-0 w-full max-w-[960px] flex-1">
           <ProjectsPanel
             activeProject={activeProject}
             activeProjectRepositories={activeProjectRepositories}
@@ -239,7 +241,7 @@ export default function RepositorySelectionPage() {
           />
         </div>
       ) : (
-        <div className="mx-auto mt-[22px] grid w-full max-w-[1200px] grid-cols-[repeat(auto-fit,minmax(min(100%,420px),1fr))] items-start gap-[22px]">
+        <div className="mt-[22px] grid min-h-0 w-full flex-1 grid-cols-1 gap-[22px] lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <RepositorySelectionPanel
             allVisibleRepositoriesSelected={allVisibleRepositoriesSelected}
             projectCountByRepositoryId={projectCountByRepositoryId}

@@ -52,6 +52,9 @@ lerna-debug.log*
 .temp
 .tmp
 
+# local cloned repositories
+repo/
+
 # Runtime data
 pids
 *.pid

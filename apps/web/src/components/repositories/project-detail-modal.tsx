@@ -1,5 +1,7 @@
+import { Folder, X } from 'lucide'
 import type { Project } from '../../models/project'
 import { formatDate, formatRelativeTime } from '../../utils/relative-time'
+import { AppIcon } from '../ui/app-icon'
 
 export interface ProjectDetailRepository {
   id: number
@@ -32,9 +34,7 @@ export function ProjectDetailModal({ project, repositories, onClose, onViewDeplo
       >
         <header className="flex items-center gap-[14px] border-b border-[#e6eaf0] px-6 py-5 dark:border-[#253044]">
           <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[11px] bg-[#eef3fc] text-[#2257c4] dark:bg-[#18243a] dark:text-[#5b8df5]">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-            </svg>
+            <AppIcon icon={Folder} size={20} strokeWidth={1.8} />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[17px] font-semibold text-[#16202e] dark:text-[#e8edf6]">{project.name}</span>
@@ -46,9 +46,7 @@ export function ProjectDetailModal({ project, repositories, onClose, onViewDeplo
             aria-label="Cerrar"
             className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-lg border border-[#d6dce5] bg-white text-[#51607a] hover:bg-[#f1f5f9] dark:border-[#2e3a51] dark:bg-[#111826] dark:text-[#a7b4c8] dark:hover:bg-[#1a2334]"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
+            <AppIcon icon={X} size={14} strokeWidth={2.2} />
           </button>
         </header>
 

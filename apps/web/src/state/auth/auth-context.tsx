@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useReducer } from 'react'
 import type { PropsWithChildren } from 'react'
-import type { AuthenticatedUserResponse } from '../../api/contracts'
-import { authService } from '../../services/auth.service'
+import type { AuthenticatedUserResponse } from "@neoglito/web/api/contracts"
+import { authService } from "@neoglito/web/services/auth.service"
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 

@@ -1,5 +1,5 @@
-import type { ProjectResponse } from '../../api/contracts';
-import type { Project } from '../../models/project';
+import type { ProjectResponse } from "@neoglito/web/api/contracts";
+import type { Project } from "@neoglito/web/models/project";
 
 export type ProjectsStatus = 'loading' | 'ready' | 'error';
 export type ProjectsPhase = 'list' | 'detail';

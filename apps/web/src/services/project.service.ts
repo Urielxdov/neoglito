@@ -6,8 +6,8 @@ import type {
   InitProjectResponse,
   ProjectDockerFilesResponse,
   ProjectResponse,
-} from '../api/contracts';
-import { apiClient } from '../api/client';
+} from "@neoglito/web/api/contracts";
+import { apiClient } from "@neoglito/web/api/client";
 
 export const projectService = {
   getAll(): Promise<ApiResponse<ProjectResponse[]>> {

@@ -1,8 +1,8 @@
-import type { ProjectDetailRepository } from '../../components/repositories/project-detail-modal';
-import type { ProjectDetailRepositoryInfo } from '../../components/repositories/project-detail-view';
-import type { Project } from '../../models/project';
-import type { Repository } from '../../models/repository';
-import { shortName } from '../../utils/repository-name';
+import type { ProjectDetailRepository } from "@neoglito/web/components/repositories/project-detail-modal";
+import type { ProjectDetailRepositoryInfo } from "@neoglito/web/components/repositories/project-detail-view";
+import type { Project } from "@neoglito/web/models/project";
+import type { Repository } from "@neoglito/web/models/repository";
+import { shortName } from "@neoglito/web/utils/repository-name";
 
 function normalizePath(path: string): string {
   return path.replace(/\\/g, '/').replace(/\/$/, '');

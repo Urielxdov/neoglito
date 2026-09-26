@@ -1,5 +1,5 @@
-import type { RepositoryResponse } from '../../api/contracts'
-import type { Repository } from '../../models/repository'
+import type { RepositoryResponse } from "@neoglito/web/api/contracts"
+import type { Repository } from "@neoglito/web/models/repository"
 
 export type RepositoriesStatus = 'loading' | 'ready' | 'error'
 

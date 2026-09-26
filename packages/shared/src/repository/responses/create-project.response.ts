@@ -1,4 +1,4 @@
-import type { IsoDateString } from '../../api/index.js'
+import type { IsoDateString } from '@neoglito/shared/api'
 
 export interface CreateProjectResponse {
   id: number

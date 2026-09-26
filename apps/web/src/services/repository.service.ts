@@ -1,5 +1,5 @@
-import type { ApiResponse, CreateRepositoryRequest, CreateRepositoryResponse, RepositoryResponse } from '../api/contracts'
-import { apiClient } from '../api/client'
+import type { ApiResponse, CreateRepositoryRequest, CreateRepositoryResponse, RepositoryResponse } from "@neoglito/web/api/contracts"
+import { apiClient } from "@neoglito/web/api/client"
 
 export const repositoryService = {
   getAll(): Promise<ApiResponse<RepositoryResponse[]>> {

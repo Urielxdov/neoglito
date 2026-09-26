@@ -1,6 +1,6 @@
 import { Check } from 'lucide'
-import type { Repository } from '../../models/repository'
-import { AppIcon } from '../ui/app-icon'
+import type { Repository } from "@neoglito/web/models/repository"
+import { AppIcon } from "@neoglito/web/components/ui/app-icon"
 
 interface RepositoryListItemProps {
   repository: Repository

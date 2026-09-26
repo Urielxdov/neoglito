@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { Moon, Sun } from 'lucide';
-import { ProjectDetailModal } from '../../components/repositories/project-detail-modal';
-import { ProjectsPanel } from '../../components/repositories/projects-panel';
-import { RepositorySelectionPanel } from '../../components/repositories/repository-selection-panel';
-import { AppIcon } from '../../components/ui/app-icon';
-import { projectService } from '../../services/project.service';
-import { repositoryService } from '../../services/repository.service';
-import { useAuth } from '../../state/auth/auth-context';
+import { ProjectDetailModal } from "@neoglito/web/components/repositories/project-detail-modal";
+import { ProjectsPanel } from "@neoglito/web/components/repositories/projects-panel";
+import { RepositorySelectionPanel } from "@neoglito/web/components/repositories/repository-selection-panel";
+import { AppIcon } from "@neoglito/web/components/ui/app-icon";
+import { projectService } from "@neoglito/web/services/project.service";
+import { repositoryService } from "@neoglito/web/services/repository.service";
+import { useAuth } from "@neoglito/web/state/auth/auth-context";
 import {
   initialProjectsState,
   projectsReducer,
-} from '../../state/projects/projects.reducer';
+} from "@neoglito/web/state/projects/projects.reducer";
 import {
   initialRepositoriesState,
   repositoriesReducer,
-} from '../../state/repositories/repositories.reducer';
+} from "@neoglito/web/state/repositories/repositories.reducer";
 import {
   getProjectCountByRepositoryId,
   getProjectDeployRepositories,
@@ -23,8 +23,8 @@ import {
   getDockerFilePathsByRepositoryId,
   getVisibleRepositories,
   isProjectNameTaken,
-} from './repository-selection.helpers';
-import { useProjectCreation } from './use-project-creation';
+} from "@neoglito/web/pages/repositories/repository-selection.helpers";
+import { useProjectCreation } from "@neoglito/web/pages/repositories/use-project-creation";
 
 export default function RepositorySelectionPage() {
   const { user } = useAuth();

@@ -1,11 +1,11 @@
 import { ChevronRight, Code, Folder } from 'lucide'
-import type { Project } from '../../models/project'
+import type { Project } from "@neoglito/web/models/project"
 import type {
   DeployEnvVar,
   ProjectsDetailTab,
-} from '../../state/projects/projects.reducer'
-import { AppIcon } from '../ui/app-icon'
-import { DeployPathDrawer } from './deploy-path-drawer'
+} from "@neoglito/web/state/projects/projects.reducer"
+import { AppIcon } from "@neoglito/web/components/ui/app-icon"
+import { DeployPathDrawer } from "@neoglito/web/components/repositories/deploy-path-drawer"
 
 export interface ProjectDetailRepositoryInfo {
   id: number

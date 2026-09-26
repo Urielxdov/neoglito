@@ -1,1 +1,1 @@
-export type { AuthenticatedUserResponse } from './authenticated-user.response.js'
+export type { AuthenticatedUserResponse } from '@neoglito/shared/auth/authenticated-user.response'

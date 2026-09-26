@@ -1,8 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import AuthenticationPage from './pages/authentication/authentication-page'
-import RepositorySelectionPage from './pages/repositories/repository-selection-page'
-import { ProtectedRoute } from './router/protected-route'
-import { AuthProvider } from './state/auth/auth-context'
+import AuthenticationPage from "@neoglito/web/pages/authentication/authentication-page"
+import RepositorySelectionPage from "@neoglito/web/pages/repositories/repository-selection-page"
+import { ProtectedRoute } from "@neoglito/web/router/protected-route"
+import { AuthProvider } from "@neoglito/web/state/auth/auth-context"
 
 function App() {
   return (

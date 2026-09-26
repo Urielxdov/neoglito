@@ -1,8 +1,8 @@
 import { GitBranch, Search } from 'lucide';
-import type { Repository } from '../../models/repository';
-import type { RepositoriesState } from '../../state/repositories/repositories.reducer';
-import { AppIcon } from '../ui/app-icon';
-import { RepositoryListItem } from './repository-list-item';
+import type { Repository } from "@neoglito/web/models/repository";
+import type { RepositoriesState } from "@neoglito/web/state/repositories/repositories.reducer";
+import { AppIcon } from "@neoglito/web/components/ui/app-icon";
+import { RepositoryListItem } from "@neoglito/web/components/repositories/repository-list-item";
 
 interface RepositorySelectionPanelProps {
   allVisibleRepositoriesSelected: boolean;

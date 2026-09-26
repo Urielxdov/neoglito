@@ -8,7 +8,7 @@ import {
   Moon,
   Sun,
 } from 'lucide'
-import { AppIcon } from './ui/app-icon'
+import { AppIcon } from "@neoglito/web/components/ui/app-icon"
 
 export type ThemeMode = 'light' | 'dark'
 export type GithubAccount = { user: string; repos?: number }

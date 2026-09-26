@@ -5,6 +5,12 @@
     "moduleResolution": "bundler",
     "strict": true,
     "skipLibCheck": true,
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@neoglito/shared": ["src/index.ts"],
+      "@neoglito/shared/*": ["src/*"]
+    },
     "noEmit": true
   },
   "include": ["src"]

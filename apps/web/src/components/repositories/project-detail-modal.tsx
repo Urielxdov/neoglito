@@ -1,7 +1,7 @@
 import { Folder, X } from 'lucide'
-import type { Project } from '../../models/project'
-import { formatDate, formatRelativeTime } from '../../utils/relative-time'
-import { AppIcon } from '../ui/app-icon'
+import type { Project } from "@neoglito/web/models/project"
+import { formatDate, formatRelativeTime } from "@neoglito/web/utils/relative-time"
+import { AppIcon } from "@neoglito/web/components/ui/app-icon"
 
 export interface ProjectDetailRepository {
   id: number

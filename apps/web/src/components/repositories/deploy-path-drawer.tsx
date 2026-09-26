@@ -1,6 +1,6 @@
 import { Code, X } from 'lucide'
-import type { DeployEnvVar } from '../../state/projects/projects.reducer'
-import { AppIcon } from '../ui/app-icon'
+import type { DeployEnvVar } from "@neoglito/web/state/projects/projects.reducer"
+import { AppIcon } from "@neoglito/web/components/ui/app-icon"
 
 interface DeployPathDrawerProps {
   repositoryName: string

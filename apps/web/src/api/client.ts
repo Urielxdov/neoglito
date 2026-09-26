@@ -1,7 +1,12 @@
-import type { ApiError, ApiResponse } from './contracts'
+import type { ApiError, ApiResponse } from "@neoglito/web/api/contracts"
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '')
 
+/**
+ * 
+ * @param value Respuesta por parte de servidor
+ * @returns Retorna true si es una respuesta estandarizada por parte de nuestro servidor
+ */
 function isApiResponse<T>(value: unknown): value is ApiResponse<T> {
   return typeof value === 'object'
     && value !== null
@@ -11,6 +16,13 @@ function isApiResponse<T>(value: unknown): value is ApiResponse<T> {
     && 'meta' in value
 }
 
+/**
+ * 
+ * @param code codigo http
+ * @param message informacion aceerca del error
+ * @param details  metadadata acerca del error
+ * @returns evaluacion si es una respuesta estandarizada por parte de nuestro servidor
+ */
 function responseError(code: string, message: string, details?: unknown): ApiResponse<never> {
   const error: ApiError = { code, message, ...(details === undefined ? {} : { details }) }
 
@@ -22,6 +34,9 @@ function responseError(code: string, message: string, details?: unknown): ApiRes
   }
 }
 
+/**
+ * Clase que maneraja la conexion a nuestra api
+ */
 export const apiClient = {
   async request<T>(path: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     try {

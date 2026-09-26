@@ -1,5 +1,5 @@
-import type { Project } from '../../models/project'
-import { formatRelativeTime } from '../../utils/relative-time'
+import type { Project } from "@neoglito/web/models/project"
+import { formatRelativeTime } from "@neoglito/web/utils/relative-time"
 
 function shortName(name: string): string {
   const parts = name.split('/')

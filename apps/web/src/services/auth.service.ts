@@ -1,5 +1,5 @@
-import { apiClient } from '../api/client'
-import type { ApiResponse, AuthenticatedUserResponse } from '../api/contracts'
+import { apiClient } from "@neoglito/web/api/client"
+import type { ApiResponse, AuthenticatedUserResponse } from "@neoglito/web/api/contracts"
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '')
 

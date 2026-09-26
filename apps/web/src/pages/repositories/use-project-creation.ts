@@ -1,18 +1,18 @@
 import { useCallback } from 'react';
 import type { Dispatch } from 'react';
-import type { Repository } from '../../models/repository';
-import { repositoryService } from '../../services/repository.service';
+import type { Repository } from "@neoglito/web/models/repository";
+import { repositoryService } from "@neoglito/web/services/repository.service";
 import type {
   ProjectsAction,
   ProjectsState,
-} from '../../state/projects/projects.reducer';
-import type { RepositoriesAction } from '../../state/repositories/repositories.reducer';
-import { projectService } from '../../services/project.service';
-import { shortName } from '../../utils/repository-name';
+} from "@neoglito/web/state/projects/projects.reducer";
+import type { RepositoriesAction } from "@neoglito/web/state/repositories/repositories.reducer";
+import { projectService } from "@neoglito/web/services/project.service";
+import { shortName } from "@neoglito/web/utils/repository-name";
 import {
   getDockerFileCandidatesByRepositoryId,
   getDockerFilePathsByRepositoryId,
-} from './repository-selection.helpers';
+} from "@neoglito/web/pages/repositories/repository-selection.helpers";
 
 interface UseProjectCreationOptions {
   canCreateProject: boolean;

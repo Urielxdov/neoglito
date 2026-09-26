@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import GitHubConnectionPanel from '../../components/RegistrarProyectoGit'
-import type { Status, ThemeMode } from '../../components/RegistrarProyectoGit'
-import { authService } from '../../services/auth.service'
-import { useAuth } from '../../state/auth/auth-context'
+import GitHubConnectionPanel from "@neoglito/web/components/RegistrarProyectoGit"
+import type { Status, ThemeMode } from "@neoglito/web/components/RegistrarProyectoGit"
+import { authService } from "@neoglito/web/services/auth.service"
+import { useAuth } from "@neoglito/web/state/auth/auth-context"
 
 export default function AuthenticationPage() {
   const { user } = useAuth()

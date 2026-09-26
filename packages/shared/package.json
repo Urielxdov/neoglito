@@ -12,13 +12,25 @@
       "types": "./src/api/index.ts",
       "import": "./src/api/index.ts"
     },
+    "./api/*": {
+      "types": "./src/api/*.ts",
+      "import": "./src/api/*.ts"
+    },
     "./auth": {
       "types": "./src/auth/index.ts",
       "import": "./src/auth/index.ts"
     },
+    "./auth/*": {
+      "types": "./src/auth/*.ts",
+      "import": "./src/auth/*.ts"
+    },
     "./repository": {
       "types": "./src/repository/index.ts",
       "import": "./src/repository/index.ts"
+    },
+    "./repository/*": {
+      "types": "./src/repository/*.ts",
+      "import": "./src/repository/*.ts"
     },
     "./package.json": "./package.json"
   }

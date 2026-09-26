@@ -1,4 +1,4 @@
-import type { ProjectRepositoryResponse } from '../api/contracts'
+import type { ProjectRepositoryResponse } from "@neoglito/web/api/contracts"
 
 export interface Project {
   id: number

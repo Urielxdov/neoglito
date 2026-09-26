@@ -1,18 +1,18 @@
 import type { Dispatch } from 'react';
 import { Folder } from 'lucide';
-import type { Project } from '../../models/project';
-import type { Repository } from '../../models/repository';
+import type { Project } from "@neoglito/web/models/project";
+import type { Repository } from "@neoglito/web/models/repository";
 import type {
   ProjectsAction,
   ProjectsState,
-} from '../../state/projects/projects.reducer';
-import { shortName } from '../../utils/repository-name';
-import { AppIcon } from '../ui/app-icon';
-import { CreateProjectForm } from './create-project-form';
-import { InitializingOverlay } from './initializing-overlay';
-import { ProjectDetailView } from './project-detail-view';
-import type { ProjectDetailRepositoryInfo } from './project-detail-view';
-import { ProjectListItem } from './project-list-item';
+} from "@neoglito/web/state/projects/projects.reducer";
+import { shortName } from "@neoglito/web/utils/repository-name";
+import { AppIcon } from "@neoglito/web/components/ui/app-icon";
+import { CreateProjectForm } from "@neoglito/web/components/repositories/create-project-form";
+import { InitializingOverlay } from "@neoglito/web/components/repositories/initializing-overlay";
+import { ProjectDetailView } from "@neoglito/web/components/repositories/project-detail-view";
+import type { ProjectDetailRepositoryInfo } from "@neoglito/web/components/repositories/project-detail-view";
+import { ProjectListItem } from "@neoglito/web/components/repositories/project-list-item";
 
 interface ProjectsPanelProps {
   activeProject: Project | null;

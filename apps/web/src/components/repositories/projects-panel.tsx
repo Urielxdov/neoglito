@@ -42,9 +42,14 @@ export function ProjectsPanel({
           project={activeProject}
           repositories={activeProjectRepositories}
           deployPaths={projectsState.deployPaths}
+          deployPathCandidates={projectsState.deployPathCandidates}
           deployEnv={projectsState.deployEnv}
           openKey={projectsState.openDeployKey}
           configured={projectsState.configuredProjectIds.has(activeProject.id)}
+          detailTab={projectsState.detailTab}
+          onTabChange={(tab) =>
+            projectsDispatch({ type: 'detail-tab-changed', tab })
+          }
           onBack={() => projectsDispatch({ type: 'detail-closed' })}
           onToggleRow={(key) =>
             projectsDispatch({ type: 'deploy-row-toggled', key })

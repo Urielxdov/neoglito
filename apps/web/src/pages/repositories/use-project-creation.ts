@@ -9,7 +9,10 @@ import type {
 import type { RepositoriesAction } from '../../state/repositories/repositories.reducer';
 import { projectService } from '../../services/project.service';
 import { shortName } from '../../utils/repository-name';
-import { getDockerFilePathsByRepositoryId } from './repository-selection.helpers';
+import {
+  getDockerFileCandidatesByRepositoryId,
+  getDockerFilePathsByRepositoryId,
+} from './repository-selection.helpers';
 
 interface UseProjectCreationOptions {
   canCreateProject: boolean;
@@ -118,6 +121,11 @@ export function useProjectCreation({
       type: 'deploy-paths-discovered',
       projectId,
       pathsByRepositoryId: getDockerFilePathsByRepositoryId(
+        repositoriesToLink,
+        initResponse.data.clonedRepositoryPaths,
+        initResponse.data.dockerComposePaths,
+      ),
+      candidatesByRepositoryId: getDockerFileCandidatesByRepositoryId(
         repositoriesToLink,
         initResponse.data.clonedRepositoryPaths,
         initResponse.data.dockerComposePaths,

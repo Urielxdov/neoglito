@@ -3,6 +3,7 @@ import type { Project } from '../../models/project';
 
 export type ProjectsStatus = 'loading' | 'ready' | 'error';
 export type ProjectsPhase = 'list' | 'detail';
+export type ProjectsDetailTab = 'deploy' | 'routes' | 'repos';
 
 export interface DeployEnvVar {
   key: string;
@@ -29,8 +30,10 @@ export interface ProjectsState {
   progress: CreationProgress | null;
   openDeployKey: string | null;
   deployPaths: Record<string, string>;
+  deployPathCandidates: Record<string, string[]>;
   deployEnv: Record<string, DeployEnvVar[]>;
   configuredProjectIds: Set<number>;
+  detailTab: ProjectsDetailTab;
 }
 
 export type ProjectsAction =
@@ -48,6 +51,7 @@ export type ProjectsAction =
   | { type: 'project-closed' }
   | { type: 'detail-opened'; id: number }
   | { type: 'detail-closed' }
+  | { type: 'detail-tab-changed'; tab: ProjectsDetailTab }
   | { type: 'deploy-row-toggled'; key: string }
   | { type: 'deploy-path-changed'; key: string; path: string }
   | { type: 'deploy-env-row-added'; key: string }
@@ -65,6 +69,7 @@ export type ProjectsAction =
       type: 'deploy-paths-discovered';
       projectId: number;
       pathsByRepositoryId: Record<number, string>;
+      candidatesByRepositoryId: Record<number, string[]>;
     };
 
 export const initialProjectsState: ProjectsState = {
@@ -81,8 +86,10 @@ export const initialProjectsState: ProjectsState = {
   progress: null,
   openDeployKey: null,
   deployPaths: {},
+  deployPathCandidates: {},
   deployEnv: {},
   configuredProjectIds: new Set(),
+  detailTab: 'deploy',
 };
 
 function toProject(project: ProjectResponse): Project {
@@ -168,9 +175,18 @@ export function projectsReducer(
         activeId: action.id,
         openId: null,
         openDeployKey: null,
+        detailTab: 'deploy',
       };
     case 'detail-closed':
-      return { ...state, phase: 'list', activeId: null, openDeployKey: null };
+      return {
+        ...state,
+        phase: 'list',
+        activeId: null,
+        openDeployKey: null,
+        detailTab: 'deploy',
+      };
+    case 'detail-tab-changed':
+      return { ...state, detailTab: action.tab };
     case 'deploy-row-toggled':
       return {
         ...state,
@@ -189,6 +205,7 @@ export function projectsReducer(
     }
     case 'deploy-paths-discovered': {
       const deployPaths = { ...state.deployPaths };
+      const deployPathCandidates = { ...state.deployPathCandidates };
       const configuredProjectIds = new Set(state.configuredProjectIds);
       configuredProjectIds.delete(action.projectId);
 
@@ -198,10 +215,18 @@ export function projectsReducer(
         deployPaths[`${action.projectId}:${repositoryId}`] = path;
       }
 
+      for (const [repositoryId, candidates] of Object.entries(
+        action.candidatesByRepositoryId,
+      )) {
+        deployPathCandidates[`${action.projectId}:${repositoryId}`] =
+          candidates;
+      }
+
       return {
         ...state,
         message: null,
         deployPaths,
+        deployPathCandidates,
         configuredProjectIds,
       };
     }

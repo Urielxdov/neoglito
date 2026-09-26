@@ -103,12 +103,12 @@ export function isProjectNameTaken(projects: Project[], name: string): boolean {
   );
 }
 
-export function getDockerFilePathsByRepositoryId(
+export function getDockerFileCandidatesByRepositoryId(
   repositories: Repository[],
   clonedRepositoryPaths: string[],
   dockerFilesPath: string[],
-): Record<number, string> {
-  const pathsByRepositoryId: Record<number, string> = {};
+): Record<number, string[]> {
+  const candidatesByRepositoryId: Record<number, string[]> = {};
   const normalizedClonedPaths = clonedRepositoryPaths.map((path) => ({
     original: path,
     normalized: normalizePath(path),
@@ -129,13 +129,36 @@ export function getDockerFilePathsByRepositoryId(
       continue;
     }
 
-    const dockerFilePath = normalizedDockerFilesPath.find((path) =>
-      path.normalized.startsWith(`${clonedRepositoryPath.normalized}/`),
-    );
+    const candidates = normalizedDockerFilesPath
+      .filter((path) =>
+        path.normalized.startsWith(`${clonedRepositoryPath.normalized}/`),
+      )
+      .map((path) => path.original);
 
-    if (dockerFilePath) {
-      pathsByRepositoryId[repository.id] = dockerFilePath.original;
+    if (candidates.length > 0) {
+      candidatesByRepositoryId[repository.id] = candidates;
     }
+  }
+
+  return candidatesByRepositoryId;
+}
+
+export function getDockerFilePathsByRepositoryId(
+  repositories: Repository[],
+  clonedRepositoryPaths: string[],
+  dockerFilesPath: string[],
+): Record<number, string> {
+  const candidatesByRepositoryId = getDockerFileCandidatesByRepositoryId(
+    repositories,
+    clonedRepositoryPaths,
+    dockerFilesPath,
+  );
+  const pathsByRepositoryId: Record<number, string> = {};
+
+  for (const [repositoryId, candidates] of Object.entries(
+    candidatesByRepositoryId,
+  )) {
+    pathsByRepositoryId[Number(repositoryId)] = candidates[0];
   }
 
   return pathsByRepositoryId;

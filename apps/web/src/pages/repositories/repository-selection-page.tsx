@@ -17,6 +17,7 @@ import {
   getProjectCountByRepositoryId,
   getProjectDeployRepositories,
   getProjectDetailRepositories,
+  getDockerFileCandidatesByRepositoryId,
   getDockerFilePathsByRepositoryId,
   getVisibleRepositories,
   isProjectNameTaken,
@@ -194,6 +195,11 @@ export default function RepositorySelectionPage() {
           response.data.clonedRepositoryPaths,
           response.data.dockerFilesPath,
         ),
+        candidatesByRepositoryId: getDockerFileCandidatesByRepositoryId(
+          repositories,
+          response.data.clonedRepositoryPaths,
+          response.data.dockerFilesPath,
+        ),
       });
     },
     [projectsState.projects, repositoriesState.repositories],
@@ -218,41 +224,57 @@ export default function RepositorySelectionPage() {
         </button>
       </div>
 
-      <div className="mx-auto mt-[22px] grid w-full max-w-[1200px] grid-cols-[repeat(auto-fit,minmax(min(100%,420px),1fr))] items-start gap-[22px]">
-        <RepositorySelectionPanel
-          allVisibleRepositoriesSelected={allVisibleRepositoriesSelected}
-          projectCountByRepositoryId={projectCountByRepositoryId}
-          repositoriesState={repositoriesState}
-          userName={user?.username}
-          visibleRepositories={visibleRepositories}
-          onClearSelection={handleClearSelection}
-          onNewProject={handleNewProject}
-          onQueryChange={(query) =>
-            repositoriesDispatch({ type: 'query-changed', query })
-          }
-          onRepositoryToggle={(id) =>
-            repositoriesDispatch({ type: 'repository-toggled', id })
-          }
-          onVisibleRepositoriesToggle={() =>
-            repositoriesDispatch({
-              type: 'visible-repositories-toggled',
-              ids: visibleRepositories.map((repository) => repository.id),
-            })
-          }
-        />
+      {projectsState.phase === 'detail' ? (
+        <div className="mx-auto mt-[22px] w-full max-w-[880px]">
+          <ProjectsPanel
+            activeProject={activeProject}
+            activeProjectRepositories={activeProjectRepositories}
+            canCreateProject={canCreateProject}
+            nameTaken={nameTaken}
+            projectsDispatch={projectsDispatch}
+            projectsState={projectsState}
+            selectedRepositories={selectedRepositories}
+            onCreateProject={() => void handleCreateProject()}
+            onOpenProject={(id) => void handleOpenProject(id)}
+          />
+        </div>
+      ) : (
+        <div className="mx-auto mt-[22px] grid w-full max-w-[1200px] grid-cols-[repeat(auto-fit,minmax(min(100%,420px),1fr))] items-start gap-[22px]">
+          <RepositorySelectionPanel
+            allVisibleRepositoriesSelected={allVisibleRepositoriesSelected}
+            projectCountByRepositoryId={projectCountByRepositoryId}
+            repositoriesState={repositoriesState}
+            userName={user?.username}
+            visibleRepositories={visibleRepositories}
+            onClearSelection={handleClearSelection}
+            onNewProject={handleNewProject}
+            onQueryChange={(query) =>
+              repositoriesDispatch({ type: 'query-changed', query })
+            }
+            onRepositoryToggle={(id) =>
+              repositoriesDispatch({ type: 'repository-toggled', id })
+            }
+            onVisibleRepositoriesToggle={() =>
+              repositoriesDispatch({
+                type: 'visible-repositories-toggled',
+                ids: visibleRepositories.map((repository) => repository.id),
+              })
+            }
+          />
 
-        <ProjectsPanel
-          activeProject={activeProject}
-          activeProjectRepositories={activeProjectRepositories}
-          canCreateProject={canCreateProject}
-          nameTaken={nameTaken}
-          projectsDispatch={projectsDispatch}
-          projectsState={projectsState}
-          selectedRepositories={selectedRepositories}
-          onCreateProject={() => void handleCreateProject()}
-          onOpenProject={(id) => void handleOpenProject(id)}
-        />
-      </div>
+          <ProjectsPanel
+            activeProject={activeProject}
+            activeProjectRepositories={activeProjectRepositories}
+            canCreateProject={canCreateProject}
+            nameTaken={nameTaken}
+            projectsDispatch={projectsDispatch}
+            projectsState={projectsState}
+            selectedRepositories={selectedRepositories}
+            onCreateProject={() => void handleCreateProject()}
+            onOpenProject={(id) => void handleOpenProject(id)}
+          />
+        </div>
+      )}
 
       {openProject && (
         <ProjectDetailModal

@@ -28,7 +28,7 @@ export const projectService = {
     request: InitProjectRequest,
   ): Promise<ApiResponse<ProjectDockerFilesResponse>> {
     return apiClient.post<ProjectDockerFilesResponse>(
-      '/project/docker_files',
+      '/deployment/docker_files',
       request,
     );
   },
@@ -37,7 +37,7 @@ export const projectService = {
     request: InitProjectRequest,
   ): Promise<ApiResponse<ProjectDockerFilesResponse>> {
     return apiClient.post<ProjectDockerFilesResponse>(
-      '/project/docker_files',
+      '/deployment/docker_files',
       request,
     );
   },

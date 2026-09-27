@@ -1,0 +1,51 @@
+enum DeploymentStatus {
+  pending
+  building
+  starting
+  running
+  failed
+  stopping
+  stopped
+}
+
+enum ContainerStatus {
+  created
+  running
+  paused
+  restarting
+  exited
+  dead
+}
+
+enum ContainerHealth {
+  starting
+  healthy
+  unhealthy
+  none
+}
+
+model Deployment {
+  id          String              @id @default(uuid())
+  projectId   Int
+  composePath String
+  status      DeploymentStatus    @default(pending)
+  createdAt   DateTime            @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  project     Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  services    DeploymentService[]
+
+  @@index([projectId, createdAt])
+}
+
+model DeploymentService {
+  id                 String          @id
+  composeServiceName String
+  status             ContainerStatus
+  health             ContainerHealth
+  lastObservedAt     DateTime        @default(now())
+  deploymentId       String
+  deployment         Deployment      @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+
+  @@index([deploymentId])
+}

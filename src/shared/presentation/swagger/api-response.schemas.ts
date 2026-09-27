@@ -1,5 +1,10 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiExtraModels, ApiProperty, ApiResponse, getSchemaPath } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiProperty,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 
 export class ApiErrorSchema {
   @ApiProperty({ example: 'INTERNAL_ERROR' })
@@ -8,7 +13,12 @@ export class ApiErrorSchema {
   @ApiProperty({ example: 'Ocurrió un error' })
   message!: string;
 
-  @ApiProperty({ required: false, nullable: true, type: Object, additionalProperties: true })
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    type: Object,
+    additionalProperties: true,
+  })
   details?: unknown;
 }
 
@@ -47,10 +57,18 @@ export class ProjectCreatedSchema {
   @ApiProperty({ example: 'Tienda para tu computadora' })
   description!: string;
 
-  @ApiProperty({ type: String, format: 'date-time', example: '2026-09-26T12:00:00.000Z' })
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    example: '2026-09-26T12:00:00.000Z',
+  })
   createdAt!: string;
 
-  @ApiProperty({ type: String, format: 'date-time', example: '2026-09-26T12:00:00.000Z' })
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    example: '2026-09-26T12:00:00.000Z',
+  })
   updatedAt!: string;
 }
 
@@ -96,7 +114,10 @@ export class InitProjectDataSchema {
   @ApiProperty({ type: [String], example: ['C:/repos/neoglito/backend'] })
   clonedRepositoryPaths!: string[];
 
-  @ApiProperty({ type: [String], example: ['C:/repos/neoglito/backend/docker-compose.yml'] })
+  @ApiProperty({
+    type: [String],
+    example: ['C:/repos/neoglito/backend/docker-compose.yml'],
+  })
   dockerComposePaths!: string[];
 
   @ApiProperty({ type: () => [ComposeAnalysisSchema] })
@@ -107,7 +128,10 @@ export class ProjectDockerFilesDataSchema {
   @ApiProperty({ type: [String], example: ['C:/repos/neoglito/backend'] })
   clonedRepositoryPaths!: string[];
 
-  @ApiProperty({ type: [String], example: ['C:/repos/neoglito/backend/docker-compose.yml'] })
+  @ApiProperty({
+    type: [String],
+    example: ['C:/repos/neoglito/backend/docker-compose.yml'],
+  })
   dockerFilesPath!: string[];
 
   @ApiProperty({ type: () => [ComposeAnalysisSchema] })
@@ -158,7 +182,11 @@ export class GitHubRepositorySchema {
   @ApiProperty({ example: 'https://github.com/example/neoglito-api.git' })
   cloneUrl!: string;
 
-  @ApiProperty({ type: String, format: 'date-time', example: '2026-09-26T12:00:00.000Z' })
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    example: '2026-09-26T12:00:00.000Z',
+  })
   updatedAt!: string;
 }
 
@@ -184,7 +212,12 @@ export function ApiSuccessResponseDoc({
   extraModels = [],
 }: ApiSuccessResponseOptions) {
   return applyDecorators(
-    ApiExtraModels(ApiSuccessEnvelopeSchema, ApiErrorSchema, ApiMetaSchema, ...extraModels),
+    ApiExtraModels(
+      ApiSuccessEnvelopeSchema,
+      ApiErrorSchema,
+      ApiMetaSchema,
+      ...extraModels,
+    ),
     ApiResponse({
       status,
       description,
@@ -196,4 +229,85 @@ export function ApiSuccessResponseDoc({
       },
     }),
   );
+}
+
+export class DeploymentServiceSchema {
+  @ApiProperty({ example: 'c4d8e6f0a7b1' })
+  id!: string;
+
+  @ApiProperty({ example: 'api' })
+  composeServiceName!: string;
+
+  @ApiProperty({
+    enum: ['created', 'running', 'paused', 'restarting', 'exited', 'dead'],
+    example: 'running',
+  })
+  status!: string;
+
+  @ApiProperty({
+    enum: ['starting', 'healthy', 'unhealthy', 'none'],
+    example: 'healthy',
+  })
+  health!: string;
+
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    example: '2026-09-26T12:00:00.000Z',
+  })
+  lastObservedAt!: string;
+}
+
+export class DeploymentSchema {
+  @ApiProperty({
+    format: 'uuid',
+    example: '0dc6bf1b-0041-4f56-9d2e-8fe08d8c00e1',
+  })
+  id!: string;
+
+  @ApiProperty({ example: 1 })
+  projectId!: number;
+
+  @ApiProperty({ example: 'C:/repos/neoglito/docker-compose.yml' })
+  composePath!: string;
+
+  @ApiProperty({
+    enum: [
+      'pending',
+      'building',
+      'starting',
+      'running',
+      'failed',
+      'stopping',
+      'stopped',
+    ],
+    example: 'running',
+  })
+  status!: string;
+
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    example: '2026-09-26T12:00:00.000Z',
+  })
+  createdAt!: string;
+
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    example: '2026-09-26T12:01:00.000Z',
+  })
+  startedAt!: string | null;
+
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    example: null,
+  })
+  finishedAt!: string | null;
+
+  @ApiProperty({ type: () => [DeploymentServiceSchema] })
+  services!: DeploymentServiceSchema[];
 }

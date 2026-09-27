@@ -10,6 +10,7 @@ import { REPOSITORY_REPOSITORY } from './domain/entities/repository.repository.j
 import { PrismaProjectRepository } from './infrastructure/persistence/prisma-project.repository.js';
 import { PrismaRepositoryRepository } from './infrastructure/persistence/prisma-repository.repository.js';
 import { ProjectController } from './presentation/project.controller.js';
+import { DeploymentController } from './presentation/deployment.controller.js';
 import { RepositoryController } from './presentation/repository.controller.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ENCRYPTION_PORT } from '../shared/application/encryption.port.js';
@@ -26,10 +27,12 @@ import { PassportModule } from '@nestjs/passport';
 import { GetRepositoriesUseCase } from './application/use-cases/get-repositories.use-case.js';
 import { CONTAINER_RUNTIME_PORT } from '../shared/application/container-runtime.port.js';
 import { DockerComposeRuntime } from '../shared/infrastructure/docker/docker-compose-runtime.service.js';
+import { GetProjectComposeFilesUseCase } from './application/use-cases/get-project-compose-files.use-case.js';
+import { DeployComposeUseCase, GetProjectDeploymentsUseCase, StopDeploymentUseCase } from './application/use-cases/deploy-compose.use-case.js';
 
 @Module({
   imports: [AuthModule, PassportModule.register({ session: false })],
-  controllers: [ProjectController, RepositoryController],
+  controllers: [ProjectController, DeploymentController, RepositoryController],
   providers: [
     PrismaService,
     CreateProjectUseCase,
@@ -38,6 +41,10 @@ import { DockerComposeRuntime } from '../shared/infrastructure/docker/docker-com
     CloneRepositoryUseCase,
     CloneRepositoriesUseCase,
     InitDeployProjectUseCase,
+    GetProjectComposeFilesUseCase,
+    DeployComposeUseCase,
+    GetProjectDeploymentsUseCase,
+    StopDeploymentUseCase,
     ExtractEnvironmentVariablesUseCase,
     GetRepositoriesUseCase,
     RecursiveFileFinderService,

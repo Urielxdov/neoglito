@@ -12,7 +12,6 @@ import { GetProjectsUseCase } from '../application/use-cases/get-projects.use-ca
 import { InitDeployProjectUseCase } from '../application/use-cases/init-deploy-project.use-case.js';
 import type {
     InitProjectResponse,
-    ProjectDockerFilesResponse,
 } from '@neoglito/shared/repository';
 import { ExtractEnvironmentVariablesUseCase } from '../../shared/application/extract-environment-variables.use-case.js';
 import { getSchemaPath, ApiBearerAuth, ApiBody, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
@@ -22,7 +21,6 @@ import {
     EnvironmentVariableSchema,
     InitProjectDataSchema,
     ProjectCreatedSchema,
-    ProjectDockerFilesDataSchema,
     ProjectRepositorySchema,
     ProjectSchema,
 } from '../../shared/presentation/swagger/api-response.schemas.js';
@@ -111,44 +109,4 @@ export class ProjectController {
         };
     }
 
-    @Post('docker_files')
-    @UseGuards(JwtAuthGuard)
-    @ApiOperation({ description: 'Busca las rutas de los dockers dentro del repositorio clonado' })
-    @ApiBody({ type: InitProjectDto })
-    @ApiUnauthorizedResponse({ description: 'Usuario no autorizado' })
-    @ApiSuccessResponseDoc({
-        status: 200,
-        description: 'Rutas de archivos Docker encontradas',
-        dataSchema: { $ref: getSchemaPath(ProjectDockerFilesDataSchema) },
-        extraModels: [ProjectDockerFilesDataSchema, ComposeAnalysisSchema, EnvironmentVariableSchema],
-    })
-    @ApiBearerAuth()
-    async dockerFilesPaths(
-        @Req() request: AuthenticatedRequest,
-        @Body() dto: InitProjectDto,
-    ): Promise<ProjectDockerFilesResponse> {
-        const clonedRepositoryPaths = await this.cloneRepositoriesUseCase.execute(
-            request.user.id,
-            dto.projectId,
-        );
-        const dockerFilesPath = (
-            await Promise.all(
-                clonedRepositoryPaths.map((repositoryPath) =>
-                    this.initDeployProjectUseCase.execute(repositoryPath),
-                ),
-            )
-        ).flat();
-        const composeAnalyses = (
-            await this.extractEnvironmentVariablesUseCase.execute(dockerFilesPath)
-        ).map((analysis) => ({
-            dockerComposePath: analysis.filePath,
-            environmentVariables: analysis.environmentVariables,
-        }));
-
-        return {
-            clonedRepositoryPaths,
-            dockerFilesPath,
-            composeAnalyses,
-        };
-    }
 }

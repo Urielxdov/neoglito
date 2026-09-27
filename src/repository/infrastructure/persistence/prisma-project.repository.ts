@@ -23,6 +23,7 @@ export class PrismaProjectRepository implements ProjectRepository {
                     name: project.name,
                     description: project.description,
                 },
+                include: { repositories: true },
             })
 
         return this.toDomain(data)

@@ -6,6 +6,7 @@ import type {
   InitProjectResponse,
   ProjectDockerFilesResponse,
   ProjectResponse,
+  UpdateProjectRequest,
 } from "@neoglito/web/api/contracts";
 import { apiClient } from "@neoglito/web/api/client";
 
@@ -40,5 +41,12 @@ export const projectService = {
       '/deployment/docker_files',
       request,
     );
+  },
+
+  update(
+    id: number,
+    request: UpdateProjectRequest,
+  ): Promise<ApiResponse<ProjectResponse>> {
+    return apiClient.post<ProjectResponse>(`/project/${id}/update`, request);
   },
 };

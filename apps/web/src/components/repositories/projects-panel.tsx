@@ -22,8 +22,14 @@ interface ProjectsPanelProps {
   projectsDispatch: Dispatch<ProjectsAction>;
   projectsState: ProjectsState;
   selectedRepositories: Repository[];
+  editName: string;
+  editDescription: string;
+  editNameTaken: boolean;
+  editClean: boolean;
   onCreateProject(): void;
   onOpenProject(id: number): void;
+  onAnalyze(): void;
+  onEditSave(): void;
 }
 
 export function ProjectsPanel({
@@ -34,8 +40,14 @@ export function ProjectsPanel({
   projectsDispatch,
   projectsState,
   selectedRepositories,
+  editName,
+  editDescription,
+  editNameTaken,
+  editClean,
   onCreateProject,
   onOpenProject,
+  onAnalyze,
+  onEditSave,
 }: ProjectsPanelProps) {
   return (
     <section className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
@@ -48,15 +60,12 @@ export function ProjectsPanel({
             deployPathCandidates={projectsState.deployPathCandidates}
             deployEnv={projectsState.deployEnv}
             openKey={projectsState.openDeployKey}
-            configured={projectsState.configuredProjectIds.has(
-              activeProject.id,
-            )}
             detailTab={projectsState.detailTab}
             onTabChange={(tab) =>
               projectsDispatch({ type: 'detail-tab-changed', tab })
             }
             onBack={() => projectsDispatch({ type: 'detail-closed' })}
-            onToggleRow={(key) =>
+            onSelectDeployFile={(key) =>
               projectsDispatch({ type: 'deploy-row-toggled', key })
             }
             onPathChange={(key, path) =>
@@ -77,12 +86,25 @@ export function ProjectsPanel({
                 value,
               })
             }
-            onConfigure={() =>
+            onAnalyze={onAnalyze}
+            editName={editName}
+            editDescription={editDescription}
+            editNameTaken={editNameTaken}
+            editClean={editClean}
+            editSubmitting={projectsState.editSubmitting}
+            editSaved={projectsState.editSaved}
+            editMessage={projectsState.editMessage}
+            onEditNameChange={(name) =>
+              projectsDispatch({ type: 'edit-name-changed', name })
+            }
+            onEditDescriptionChange={(description) =>
               projectsDispatch({
-                type: 'deploy-configured',
-                projectId: activeProject.id,
+                type: 'edit-description-changed',
+                description,
               })
             }
+            onEditReset={() => projectsDispatch({ type: 'edit-reset' })}
+            onEditSave={onEditSave}
           />
         </div>
       ) : (

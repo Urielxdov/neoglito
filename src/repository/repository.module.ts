@@ -29,6 +29,7 @@ import { CONTAINER_RUNTIME_PORT } from '../shared/application/container-runtime.
 import { DockerComposeRuntime } from '../shared/infrastructure/docker/docker-compose-runtime.service.js';
 import { GetProjectComposeFilesUseCase } from './application/use-cases/get-project-compose-files.use-case.js';
 import { DeployComposeUseCase, GetProjectDeploymentsUseCase, StopDeploymentUseCase } from './application/use-cases/deploy-compose.use-case.js';
+import { UpdateProjectUseCase } from './application/use-cases/update-project.use-case.js';
 
 @Module({
   imports: [AuthModule, PassportModule.register({ session: false })],
@@ -37,6 +38,7 @@ import { DeployComposeUseCase, GetProjectDeploymentsUseCase, StopDeploymentUseCa
     PrismaService,
     CreateProjectUseCase,
     GetProjectsUseCase,
+    UpdateProjectUseCase,
     CreateRepositoryUseCase,
     CloneRepositoryUseCase,
     CloneRepositoriesUseCase,

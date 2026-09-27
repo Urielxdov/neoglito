@@ -94,15 +94,26 @@ export function getProjectDeployRepositories(
   });
 }
 
-export function isProjectNameTaken(projects: Project[], name: string): boolean {
+export function isProjectNameTaken(
+  projects: Project[],
+  name: string,
+  excludeProjectId?: number,
+): boolean {
   const normalizedName = name.trim().toLowerCase();
 
   return (
     normalizedName.length > 0 &&
     projects.some(
-      (project) => project.name.trim().toLowerCase() === normalizedName,
+      (project) =>
+        project.id !== excludeProjectId &&
+        project.name.trim().toLowerCase() === normalizedName,
     )
   );
+}
+
+export function getMissingRequiredEnvCount(rows: DeployEnvVar[]): number {
+  return rows.filter((row) => row.required && row.value.trim().length === 0)
+    .length;
 }
 
 export function getDockerFileCandidatesByRepositoryId(
@@ -199,6 +210,7 @@ export function getEnvironmentVariablesByRepositoryId(
         analysis.environmentVariables.map((variable) => ({
           key: variable.name,
           value: variable.value ?? variable.defaultValue ?? '',
+          required: variable.value === null && variable.defaultValue === null,
         })),
       );
 

@@ -1,19 +1,39 @@
-import type { ProjectResponse } from "@neoglito/web/api/contracts";
+import type {
+  DeploymentResponse,
+  ProjectResponse,
+} from "@neoglito/web/api/contracts";
 import type { Project } from "@neoglito/web/models/project";
 
 export type ProjectsStatus = 'loading' | 'ready' | 'error';
-export type ProjectsPhase = 'list' | 'detail';
-export type ProjectsDetailTab = 'deploy' | 'routes' | 'repos';
+export type ProjectsPhase = 'list' | 'detail' | 'analyze';
+export type ProjectsDetailTab = 'deploy' | 'routes' | 'repos' | 'general';
 
 export interface DeployEnvVar {
   key: string;
   value: string;
+  required: boolean;
 }
 
 export interface CreationProgress {
   done: number;
   total: number;
   label: string;
+}
+
+export type AnalyzeRepoStatus = 'pending' | 'succeeded' | 'failed';
+
+export interface AnalyzeRepoState {
+  repositoryId: number;
+  status: AnalyzeRepoStatus;
+  deployment: DeploymentResponse | null;
+  message: string | null;
+}
+
+export interface AnalyzeState {
+  projectId: number;
+  repos: AnalyzeRepoState[];
+  collapsed: Record<number, boolean>;
+  selectedKey: string | null;
 }
 
 export interface ProjectsState {
@@ -32,8 +52,13 @@ export interface ProjectsState {
   deployPaths: Record<string, string>;
   deployPathCandidates: Record<string, string[]>;
   deployEnv: Record<string, DeployEnvVar[]>;
-  configuredProjectIds: Set<number>;
   detailTab: ProjectsDetailTab;
+  editName: string | null;
+  editDescription: string | null;
+  editSubmitting: boolean;
+  editSaved: boolean;
+  editMessage: string | null;
+  analyze: AnalyzeState | null;
 }
 
 export type ProjectsAction =
@@ -63,7 +88,6 @@ export type ProjectsAction =
       field: 'key' | 'value';
       value: string;
     }
-  | { type: 'deploy-configured'; projectId: number }
   | { type: 'deploy-paths-discovery-failed'; message: string }
   | {
       type: 'deploy-env-discovered';
@@ -75,7 +99,23 @@ export type ProjectsAction =
       projectId: number;
       pathsByRepositoryId: Record<number, string>;
       candidatesByRepositoryId: Record<number, string[]>;
-    };
+    }
+  | { type: 'edit-name-changed'; name: string }
+  | { type: 'edit-description-changed'; description: string }
+  | { type: 'edit-reset' }
+  | { type: 'edit-submitting' }
+  | { type: 'edit-succeeded'; project: ProjectResponse }
+  | { type: 'edit-failed'; message: string }
+  | { type: 'analyze-opened'; projectId: number; repositoryIds: number[] }
+  | { type: 'analyze-closed' }
+  | {
+      type: 'analyze-repo-succeeded';
+      repositoryId: number;
+      deployment: DeploymentResponse;
+    }
+  | { type: 'analyze-repo-failed'; repositoryId: number; message: string }
+  | { type: 'analyze-group-toggled'; repositoryId: number }
+  | { type: 'analyze-service-selected'; key: string };
 
 export const initialProjectsState: ProjectsState = {
   status: 'loading',
@@ -93,8 +133,13 @@ export const initialProjectsState: ProjectsState = {
   deployPaths: {},
   deployPathCandidates: {},
   deployEnv: {},
-  configuredProjectIds: new Set(),
   detailTab: 'deploy',
+  editName: null,
+  editDescription: null,
+  editSubmitting: false,
+  editSaved: false,
+  editMessage: null,
+  analyze: null,
 };
 
 function toProject(project: ProjectResponse): Project {
@@ -106,10 +151,6 @@ function toProject(project: ProjectResponse): Project {
     updatedAt: new Date(project.updatedAt),
     repositories: project.repositories,
   };
-}
-
-function projectIdFromKey(key: string): number {
-  return Number(key.split(':')[0]);
 }
 
 export function projectsReducer(
@@ -181,6 +222,10 @@ export function projectsReducer(
         openId: null,
         openDeployKey: null,
         detailTab: 'deploy',
+        editName: null,
+        editDescription: null,
+        editSaved: false,
+        editMessage: null,
       };
     case 'detail-closed':
       return {
@@ -189,30 +234,28 @@ export function projectsReducer(
         activeId: null,
         openDeployKey: null,
         detailTab: 'deploy',
+        editName: null,
+        editDescription: null,
+        editSaved: false,
+        editMessage: null,
       };
     case 'detail-tab-changed':
-      return { ...state, detailTab: action.tab };
-    case 'deploy-row-toggled':
       return {
         ...state,
-        openDeployKey: state.openDeployKey === action.key ? null : action.key,
+        detailTab: action.tab,
+        editSaved: false,
+        editMessage: null,
       };
-    case 'deploy-path-changed': {
-      const projectId = projectIdFromKey(action.key);
-      const configuredProjectIds = new Set(state.configuredProjectIds);
-      configuredProjectIds.delete(projectId);
-
+    case 'deploy-row-toggled':
+      return { ...state, openDeployKey: action.key };
+    case 'deploy-path-changed':
       return {
         ...state,
         deployPaths: { ...state.deployPaths, [action.key]: action.path },
-        configuredProjectIds,
       };
-    }
     case 'deploy-paths-discovered': {
       const deployPaths = { ...state.deployPaths };
       const deployPathCandidates = { ...state.deployPathCandidates };
-      const configuredProjectIds = new Set(state.configuredProjectIds);
-      configuredProjectIds.delete(action.projectId);
 
       for (const [repositoryId, path] of Object.entries(
         action.pathsByRepositoryId,
@@ -232,7 +275,6 @@ export function projectsReducer(
         message: null,
         deployPaths,
         deployPathCandidates,
-        configuredProjectIds,
       };
     }
     case 'deploy-paths-discovery-failed':
@@ -244,7 +286,7 @@ export function projectsReducer(
         ...state,
         deployEnv: {
           ...state.deployEnv,
-          [action.key]: [...rows, { key: '', value: '' }],
+          [action.key]: [...rows, { key: '', value: '', required: false }],
         },
       };
     }
@@ -276,8 +318,6 @@ export function projectsReducer(
     }
     case 'deploy-env-discovered': {
       const deployEnv = { ...state.deployEnv };
-      const configuredProjectIds = new Set(state.configuredProjectIds);
-      configuredProjectIds.delete(action.projectId);
 
       for (const [repositoryId, env] of Object.entries(
         action.envByRepositoryId,
@@ -285,13 +325,128 @@ export function projectsReducer(
         deployEnv[`${action.projectId}:${repositoryId}`] = env;
       }
 
-      return { ...state, deployEnv, configuredProjectIds };
+      return { ...state, deployEnv };
     }
-    case 'deploy-configured': {
-      const configuredProjectIds = new Set(state.configuredProjectIds);
-      configuredProjectIds.add(action.projectId);
+    case 'edit-name-changed':
+      return { ...state, editName: action.name, editSaved: false };
+    case 'edit-description-changed':
+      return {
+        ...state,
+        editDescription: action.description,
+        editSaved: false,
+      };
+    case 'edit-reset':
+      return {
+        ...state,
+        editName: null,
+        editDescription: null,
+        editSaved: false,
+        editMessage: null,
+      };
+    case 'edit-submitting':
+      return { ...state, editSubmitting: true, editMessage: null };
+    case 'edit-succeeded':
+      return {
+        ...state,
+        editSubmitting: false,
+        editName: null,
+        editDescription: null,
+        editSaved: true,
+        editMessage: null,
+        projects: state.projects.map((project) =>
+          project.id === action.project.id
+            ? toProject(action.project)
+            : project,
+        ),
+      };
+    case 'edit-failed':
+      return { ...state, editSubmitting: false, editMessage: action.message };
+    case 'analyze-opened':
+      return {
+        ...state,
+        phase: 'analyze',
+        analyze: {
+          projectId: action.projectId,
+          repos: action.repositoryIds.map((repositoryId) => ({
+            repositoryId,
+            status: 'pending',
+            deployment: null,
+            message: null,
+          })),
+          collapsed: {},
+          selectedKey: null,
+        },
+      };
+    case 'analyze-closed':
+      return {
+        ...state,
+        phase: 'detail',
+        analyze: null,
+        detailTab: 'deploy',
+      };
+    case 'analyze-repo-succeeded': {
+      if (!state.analyze) return state;
 
-      return { ...state, configuredProjectIds };
+      return {
+        ...state,
+        analyze: {
+          ...state.analyze,
+          repos: state.analyze.repos.map((repo) =>
+            repo.repositoryId === action.repositoryId
+              ? {
+                  ...repo,
+                  status: 'succeeded',
+                  deployment: action.deployment,
+                  message: null,
+                }
+              : repo,
+          ),
+        },
+      };
+    }
+    case 'analyze-repo-failed': {
+      if (!state.analyze) return state;
+
+      return {
+        ...state,
+        analyze: {
+          ...state.analyze,
+          repos: state.analyze.repos.map((repo) =>
+            repo.repositoryId === action.repositoryId
+              ? {
+                  ...repo,
+                  status: 'failed',
+                  deployment: null,
+                  message: action.message,
+                }
+              : repo,
+          ),
+        },
+      };
+    }
+    case 'analyze-group-toggled': {
+      if (!state.analyze) return state;
+
+      return {
+        ...state,
+        analyze: {
+          ...state.analyze,
+          collapsed: {
+            ...state.analyze.collapsed,
+            [action.repositoryId]: !state.analyze.collapsed[
+              action.repositoryId
+            ],
+          },
+        },
+      };
+    }
+    case 'analyze-service-selected': {
+      if (!state.analyze) return state;
+
+      return {
+        ...state,
+        analyze: { ...state.analyze, selectedKey: action.key },
+      };
     }
   }
 }

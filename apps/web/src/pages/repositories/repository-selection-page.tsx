@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { Moon, Sun } from 'lucide';
+import { ProjectAnalyzeView } from "@neoglito/web/components/repositories/project-analyze-view";
 import { ProjectDetailModal } from "@neoglito/web/components/repositories/project-detail-modal";
 import { ProjectsPanel } from "@neoglito/web/components/repositories/projects-panel";
 import { RepositorySelectionPanel } from "@neoglito/web/components/repositories/repository-selection-panel";
@@ -25,6 +26,7 @@ import {
   getVisibleRepositories,
   isProjectNameTaken,
 } from "@neoglito/web/pages/repositories/repository-selection.helpers";
+import { useProjectAnalysis } from "@neoglito/web/pages/repositories/use-project-analysis";
 import { useProjectCreation } from "@neoglito/web/pages/repositories/use-project-creation";
 
 export default function RepositorySelectionPage() {
@@ -132,6 +134,8 @@ export default function RepositorySelectionPage() {
       selectedRepositories,
     });
 
+  const { startAnalysis } = useProjectAnalysis({ projectsDispatch });
+
   const openProject =
     projectsState.projects.find(
       (project) => project.id === projectsState.openId,
@@ -217,6 +221,55 @@ export default function RepositorySelectionPage() {
     [projectsState.projects, repositoriesState.repositories],
   );
 
+  const editName = projectsState.editName ?? activeProject?.name ?? '';
+  const editDescription =
+    projectsState.editDescription ?? activeProject?.description ?? '';
+  const editNameTaken = isProjectNameTaken(
+    projectsState.projects,
+    editName,
+    activeProject?.id,
+  );
+  const editClean = activeProject
+    ? editName === activeProject.name &&
+      editDescription === activeProject.description
+    : true;
+
+  const handleSaveGeneral = useCallback(async () => {
+    if (
+      !activeProject ||
+      editClean ||
+      editNameTaken ||
+      !editName.trim() ||
+      !editDescription.trim()
+    ) {
+      return;
+    }
+
+    projectsDispatch({ type: 'edit-submitting' });
+
+    const response = await projectService.update(activeProject.id, {
+      name: editName.trim(),
+      description: editDescription.trim(),
+    });
+
+    if (!response.success || !response.data) {
+      projectsDispatch({
+        type: 'edit-failed',
+        message:
+          response.error?.message ?? 'No fue posible guardar los cambios.',
+      });
+      return;
+    }
+
+    projectsDispatch({ type: 'edit-succeeded', project: response.data });
+  }, [activeProject, editClean, editDescription, editName, editNameTaken]);
+
+  const handleAnalyze = useCallback(() => {
+    if (!activeProject) return;
+
+    startAnalysis(activeProject, activeProjectRepositories, projectsState.deployPaths);
+  }, [activeProject, activeProjectRepositories, projectsState.deployPaths, startAnalysis]);
+
   return (
     <main
       data-theme={theme}
@@ -236,7 +289,20 @@ export default function RepositorySelectionPage() {
         </button>
       </div>
 
-      {projectsState.phase === 'detail' ? (
+      {projectsState.phase === 'analyze' && activeProject && projectsState.analyze ? (
+        <ProjectAnalyzeView
+          project={activeProject}
+          repositories={activeProjectRepositories}
+          analyze={projectsState.analyze}
+          onBack={() => projectsDispatch({ type: 'analyze-closed' })}
+          onToggleGroup={(id) =>
+            projectsDispatch({ type: 'analyze-group-toggled', repositoryId: id })
+          }
+          onSelectService={(key) =>
+            projectsDispatch({ type: 'analyze-service-selected', key })
+          }
+        />
+      ) : projectsState.phase === 'detail' ? (
         <div className="mx-auto mt-[22px] min-h-0 w-full max-w-[960px] flex-1">
           <ProjectsPanel
             activeProject={activeProject}
@@ -246,8 +312,14 @@ export default function RepositorySelectionPage() {
             projectsDispatch={projectsDispatch}
             projectsState={projectsState}
             selectedRepositories={selectedRepositories}
+            editName={editName}
+            editDescription={editDescription}
+            editNameTaken={editNameTaken}
+            editClean={editClean}
             onCreateProject={() => void handleCreateProject()}
             onOpenProject={(id) => void handleOpenProject(id)}
+            onAnalyze={handleAnalyze}
+            onEditSave={() => void handleSaveGeneral()}
           />
         </div>
       ) : (
@@ -282,8 +354,14 @@ export default function RepositorySelectionPage() {
             projectsDispatch={projectsDispatch}
             projectsState={projectsState}
             selectedRepositories={selectedRepositories}
+            editName={editName}
+            editDescription={editDescription}
+            editNameTaken={editNameTaken}
+            editClean={editClean}
             onCreateProject={() => void handleCreateProject()}
             onOpenProject={(id) => void handleOpenProject(id)}
+            onAnalyze={handleAnalyze}
+            onEditSave={() => void handleSaveGeneral()}
           />
         </div>
       )}

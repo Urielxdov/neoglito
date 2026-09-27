@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/infrastructure/passport/jwt-auth.guard.js';
 import type { AuthenticatedRequest } from '../../shared/presentation/http/authenticated-request.js';
 import { CreateProjectDto } from '../application/dto/create-project.dto.js';
 import { InitProjectDto } from '../application/dto/init-project.dto.js';
+import { UpdateProjectDto } from '../application/dto/update-project.dto.js';
 import { CreateProjectRequest } from '../application/requests/create-project.request.js';
 import { CreateProjectResponse } from '../application/responses/create-project.response.js';
 import type { ProjectResponse } from '../application/responses/project.response.js';
@@ -10,11 +11,12 @@ import { CloneRepositoriesUseCase } from '../application/use-cases/clone-reposit
 import { CreateProjectUseCase } from '../application/use-cases/create-project.use-case.js';
 import { GetProjectsUseCase } from '../application/use-cases/get-projects.use-case.js';
 import { InitDeployProjectUseCase } from '../application/use-cases/init-deploy-project.use-case.js';
+import { UpdateProjectUseCase } from '../application/use-cases/update-project.use-case.js';
 import type {
     InitProjectResponse,
 } from '@neoglito/shared/repository';
 import { ExtractEnvironmentVariablesUseCase } from '../../shared/application/extract-environment-variables.use-case.js';
-import { getSchemaPath, ApiBearerAuth, ApiBody, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import { getSchemaPath, ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import {
     ApiSuccessResponseDoc,
     ComposeAnalysisSchema,
@@ -34,6 +36,7 @@ export class ProjectController {
         private readonly cloneRepositoriesUseCase: CloneRepositoriesUseCase,
         private readonly initDeployProjectUseCase: InitDeployProjectUseCase,
         private readonly extractEnvironmentVariablesUseCase: ExtractEnvironmentVariablesUseCase,
+        private readonly updateProjectUseCase: UpdateProjectUseCase,
     ) { }
 
     @Post('registry')
@@ -107,6 +110,26 @@ export class ProjectController {
             dockerComposePaths,
             composeAnalyses,
         };
+    }
+
+    @Post(':id/update')
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ description: 'Actualiza el nombre y la descripcion de un proyecto' })
+    @ApiParam({ name: 'id', type: Number, example: 1 })
+    @ApiBody({ type: UpdateProjectDto })
+    @ApiSuccessResponseDoc({
+        status: 200,
+        description: 'Proyecto actualizado correctamente',
+        dataSchema: { $ref: getSchemaPath(ProjectSchema) },
+        extraModels: [ProjectSchema, ProjectRepositorySchema],
+    })
+    @ApiUnauthorizedResponse({ description: 'No autorizado' })
+    @ApiBearerAuth()
+    async update(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: UpdateProjectDto,
+    ): Promise<ProjectResponse> {
+        return this.updateProjectUseCase.execute(id, dto.name, dto.description);
     }
 
 }

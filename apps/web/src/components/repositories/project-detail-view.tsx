@@ -1,11 +1,14 @@
-import { ChevronRight, Code, Folder } from 'lucide'
+import { Folder } from 'lucide'
 import type { Project } from "@neoglito/web/models/project"
 import type {
   DeployEnvVar,
   ProjectsDetailTab,
 } from "@neoglito/web/state/projects/projects.reducer"
+import { getMissingRequiredEnvCount } from "@neoglito/web/pages/repositories/repository-selection.helpers"
 import { AppIcon } from "@neoglito/web/components/ui/app-icon"
-import { DeployPathDrawer } from "@neoglito/web/components/repositories/deploy-path-drawer"
+import { DeployFileList } from "@neoglito/web/components/repositories/deploy-file-list"
+import { DeployFileDetail } from "@neoglito/web/components/repositories/deploy-file-detail"
+import { ProjectGeneralTab } from "@neoglito/web/components/repositories/project-general-tab"
 
 export interface ProjectDetailRepositoryInfo {
   id: number
@@ -20,11 +23,10 @@ interface ProjectDetailViewProps {
   deployPathCandidates: Record<string, string[]>
   deployEnv: Record<string, DeployEnvVar[]>
   openKey: string | null
-  configured: boolean
   detailTab: ProjectsDetailTab
   onTabChange(tab: ProjectsDetailTab): void
   onBack(): void
-  onToggleRow(key: string): void
+  onSelectDeployFile(key: string): void
   onPathChange(key: string, path: string): void
   onEnvAdd(key: string): void
   onEnvRemove(key: string, index: number): void
@@ -34,7 +36,18 @@ interface ProjectDetailViewProps {
     field: 'key' | 'value',
     value: string,
   ): void
-  onConfigure(): void
+  onAnalyze(): void
+  editName: string
+  editDescription: string
+  editNameTaken: boolean
+  editClean: boolean
+  editSubmitting: boolean
+  editSaved: boolean
+  editMessage: string | null
+  onEditNameChange(name: string): void
+  onEditDescriptionChange(description: string): void
+  onEditReset(): void
+  onEditSave(): void
 }
 
 function shortName (name: string): string {
@@ -49,34 +62,45 @@ export function ProjectDetailView ({
   deployPathCandidates,
   deployEnv,
   openKey,
-  configured,
   detailTab,
   onTabChange,
   onBack,
-  onToggleRow,
+  onSelectDeployFile,
   onPathChange,
   onEnvAdd,
   onEnvRemove,
   onEnvChange,
-  onConfigure,
+  onAnalyze,
+  editName,
+  editDescription,
+  editNameTaken,
+  editClean,
+  editSubmitting,
+  editSaved,
+  editMessage,
+  onEditNameChange,
+  onEditDescriptionChange,
+  onEditReset,
+  onEditSave,
 }: ProjectDetailViewProps) {
   const total = repositories.length
-  const readyCount = repositories.filter(
-    repository =>
-      (deployPaths[`${project.id}:${repository.id}`] ?? '').trim().length > 0,
-  ).length
+  const readyCount = repositories.filter(repository => {
+    const key = `${project.id}:${repository.id}`
+    const path = (deployPaths[key] ?? '').trim()
+    return path.length > 0 && getMissingRequiredEnvCount(deployEnv[key] ?? []) === 0
+  }).length
   const allReady = total > 0 && readyCount === total
 
-  const openRepository = openKey
-    ? repositories.find(
-        repository => `${project.id}:${repository.id}` === openKey,
-      )
+  const selectedKey = openKey ?? (repositories[0] ? `${project.id}:${repositories[0].id}` : null)
+  const selectedRepository = selectedKey
+    ? repositories.find(repository => `${project.id}:${repository.id}` === selectedKey)
     : undefined
 
   const tabs: Array<{ key: ProjectsDetailTab; label: string; count: string }> = [
     { key: 'deploy', label: 'Despliegue', count: `${readyCount}/${total}` },
     { key: 'routes', label: 'Rutas API', count: '0' },
     { key: 'repos', label: 'Repositorios', count: `${total}` },
+    { key: 'general', label: 'General', count: '' },
   ]
 
   return (
@@ -121,64 +145,46 @@ export function ProjectDetailView ({
               }`}
             >
               <span>{tab.label}</span>
-              <span className='text-[11.5px] font-semibold text-[#8c98ac] dark:text-[#7a8699]'>
-                {tab.count}
-              </span>
+              {tab.count && (
+                <span className='text-[11.5px] font-semibold text-[#8c98ac] dark:text-[#7a8699]'>
+                  {tab.count}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
-        {detailTab === 'deploy' && (
+        {detailTab === 'deploy' && selectedKey && (
           <div className='flex flex-col gap-4'>
             <span className='text-[13px] leading-[1.5] text-[#8c98ac] dark:text-[#7a8699]'>
-              Cada repositorio usa un archivo de despliegue. Ábrelo para
+              Cada repositorio usa un archivo de despliegue. Selecciónalo para
               confirmar la ruta y llenar sus variables de entorno.
             </span>
 
-            <div className='overflow-hidden rounded-lg border border-[#e0e6ef] dark:border-[#253044]'>
-              {repositories.map((repository, index) => {
-                const key = `${project.id}:${repository.id}`
-                const path = deployPaths[key] ?? ''
+            <div className='flex flex-wrap items-start gap-4'>
+              <DeployFileList
+                projectId={project.id}
+                repositories={repositories}
+                deployPaths={deployPaths}
+                deployEnv={deployEnv}
+                selectedKey={selectedKey}
+                onSelect={onSelectDeployFile}
+              />
 
-                return (
-                  <button
-                    key={repository.id}
-                    type='button'
-                    onClick={() => onToggleRow(key)}
-                    className={`flex w-full items-center gap-3 px-4 py-[13px] text-left transition-colors hover:bg-[#f8fafc] dark:hover:bg-[#0c121d] ${
-                      index === 0
-                        ? ''
-                        : 'border-t border-[#e6eaf0] dark:border-[#253044]'
-                    }`}
-                  >
-                    <span className='grid h-[30px] w-[30px] shrink-0 place-items-center rounded-lg bg-[#f1f5f9] text-[#51607a] dark:bg-[#1a2334] dark:text-[#a7b4c8]'>
-                      <AppIcon icon={Code} size={15} />
-                    </span>
-                    <span className='flex min-w-0 flex-1 flex-col gap-0.5'>
-                      <span className='truncate font-mono text-[13.5px] font-medium text-[#16202e] dark:text-[#e8edf6]'>
-                        {path.trim() || 'Sin archivo de despliegue'}
-                      </span>
-                      <span className='truncate text-[12px] text-[#8c98ac] dark:text-[#7a8699]'>
-                        {shortName(repository.name)}
-                      </span>
-                    </span>
-                    <span
-                      className={`inline-flex h-[22px] shrink-0 items-center whitespace-nowrap rounded-full px-2.5 text-[11.5px] font-semibold ${
-                        path.trim()
-                          ? 'bg-[#e6f4ec] text-[#1d7a45] dark:bg-[#12291d] dark:text-[#5fcf8f]'
-                          : 'bg-[#fbefe0] text-[#a4550a] dark:bg-[#2d1f10] dark:text-[#f0a458]'
-                      }`}
-                    >
-                      {path.trim() ? 'Listo' : 'Sin ruta'}
-                    </span>
-                    <AppIcon
-                      icon={ChevronRight}
-                      size={14}
-                      className='shrink-0 text-[#8c98ac] dark:text-[#7a8699]'
-                    />
-                  </button>
-                )
-              })}
+              {selectedRepository && (
+                <DeployFileDetail
+                  repositoryName={shortName(selectedRepository.name)}
+                  path={deployPaths[selectedKey] ?? ''}
+                  candidates={deployPathCandidates[selectedKey] ?? []}
+                  env={deployEnv[selectedKey] ?? []}
+                  onPathChange={path => onPathChange(selectedKey, path)}
+                  onEnvAdd={() => onEnvAdd(selectedKey)}
+                  onEnvRemove={index => onEnvRemove(selectedKey, index)}
+                  onEnvChange={(index, field, value) =>
+                    onEnvChange(selectedKey, index, field, value)
+                  }
+                />
+              )}
             </div>
           </div>
         )}
@@ -242,41 +248,38 @@ export function ProjectDetailView ({
             ))}
           </div>
         )}
+
+        {detailTab === 'general' && (
+          <ProjectGeneralTab
+            name={editName}
+            description={editDescription}
+            nameTaken={editNameTaken}
+            clean={editClean}
+            submitting={editSubmitting}
+            saved={editSaved}
+            message={editMessage}
+            meta={`Creado ${project.createdAt.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+            onNameChange={onEditNameChange}
+            onDescriptionChange={onEditDescriptionChange}
+            onReset={onEditReset}
+            onSave={onEditSave}
+          />
+        )}
       </div>
 
       <div className='flex flex-wrap items-center justify-between gap-3 border-t border-[#e6eaf0] bg-[#f8fafc] px-6 py-4 dark:border-[#253044] dark:bg-[#0c121d]'>
         <span className='text-[12.5px] text-[#8c98ac] dark:text-[#7a8699]'>
-          {configured
-            ? 'Configuración guardada.'
-            : `${readyCount} de ${total} archivos con ruta capturada`}
+          {`${readyCount} de ${total} archivos listos`}
         </span>
         <button
           type='button'
           disabled={!allReady}
-          onClick={onConfigure}
+          onClick={onAnalyze}
           className='h-10 rounded-lg bg-[#2257c4] px-[18px] text-[13px] font-semibold text-white shadow-[0_1px_2px_rgba(34,87,196,0.35)] enabled:hover:bg-[#1c489f] disabled:cursor-not-allowed disabled:opacity-50'
         >
-          Configurar despliegue →
+          Analizar
         </button>
       </div>
-
-      {openKey && openRepository && (
-        <DeployPathDrawer
-          repositoryName={shortName(openRepository.name)}
-          path={deployPaths[openKey] ?? ''}
-          candidates={deployPathCandidates[openKey] ?? []}
-          env={deployEnv[openKey] ?? []}
-          statusLabel={(deployPaths[openKey] ?? '').trim() ? 'Listo' : 'Sin ruta'}
-          ready={Boolean((deployPaths[openKey] ?? '').trim())}
-          onClose={() => onToggleRow(openKey)}
-          onPathChange={path => onPathChange(openKey, path)}
-          onEnvAdd={() => onEnvAdd(openKey)}
-          onEnvRemove={index => onEnvRemove(openKey, index)}
-          onEnvChange={(index, field, value) =>
-            onEnvChange(openKey, index, field, value)
-          }
-        />
-      )}
     </>
   )
 }

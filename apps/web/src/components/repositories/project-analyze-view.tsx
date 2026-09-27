@@ -1,8 +1,9 @@
 import type { Project } from "@neoglito/web/models/project"
 import type { ProjectDetailRepositoryInfo } from "@neoglito/web/components/repositories/project-detail-view"
-import type { AnalyzeState } from "@neoglito/web/state/projects/projects.reducer"
+import type { AnalyzeState, AnalyzeTab } from "@neoglito/web/state/projects/projects.reducer"
 import { formatRelativeTime } from "@neoglito/web/utils/relative-time"
 import { AnalyzeRepoGroup } from "@neoglito/web/components/repositories/analyze-repo-group"
+import { AnalyzeRelationsPlaceholder } from "@neoglito/web/components/repositories/analyze-relations-placeholder"
 import { serviceTone } from "@neoglito/web/components/repositories/analyze-service-tone"
 
 function shortName(name: string): string {
@@ -17,6 +18,7 @@ interface ProjectAnalyzeViewProps {
   onBack(): void
   onToggleGroup(repositoryId: number): void
   onSelectService(key: string): void
+  onTabChange(tab: AnalyzeTab): void
 }
 
 export function ProjectAnalyzeView({
@@ -26,6 +28,7 @@ export function ProjectAnalyzeView({
   onBack,
   onToggleGroup,
   onSelectService,
+  onTabChange,
 }: ProjectAnalyzeViewProps) {
   const total = analyze.repos.length
   const settled = analyze.repos.filter((repo) => repo.status !== 'pending').length
@@ -68,6 +71,26 @@ export function ProjectAnalyzeView({
       ? selectedAnalyzeRepo.deployment.services[selectedServiceIndex]
       : undefined
 
+  const allServices = analyze.repos.flatMap((repo) => {
+    const repository = repositories.find((r) => r.id === repo.repositoryId)
+    const repositoryName = repository ? shortName(repository.name) : `#${repo.repositoryId}`
+
+    return (
+      repo.deployment?.services.map((service, serviceIndex) => ({
+        key: `${repo.repositoryId}:${serviceIndex}`,
+        name: service.composeServiceName,
+        repositoryName,
+        status: service.status,
+        health: service.health,
+      })) ?? []
+    )
+  })
+
+  const tabs: Array<{ key: AnalyzeTab; label: string; count: string }> = [
+    { key: 'services', label: 'Servicios', count: String(total) },
+    { key: 'relations', label: 'Relaciones', count: String(allServices.length) },
+  ]
+
   return (
     <div className="mx-auto mt-[22px] flex min-h-0 w-full max-w-[1200px] flex-1 flex-col gap-[18px]">
       <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-[#e6eaf0] bg-white px-[22px] py-[18px] shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:border-[#253044] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
@@ -101,6 +124,31 @@ export function ProjectAnalyzeView({
         </span>
       </div>
 
+      <div className="flex w-fit gap-1 self-start rounded-[10px] border border-[#e6eaf0] bg-white p-1 dark:border-[#253044] dark:bg-[#111826]">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => onTabChange(tab.key)}
+            className={`flex h-[34px] shrink-0 items-center gap-2 whitespace-nowrap rounded-[7px] px-[16px] text-[13px] font-semibold transition-colors ${
+              analyze.tab === tab.key
+                ? 'bg-[#f1f5f9] text-[#16202e] dark:bg-[#1a2334] dark:text-[#e8edf6]'
+                : 'text-[#8c98ac] hover:text-[#51607a] dark:text-[#7a8699] dark:hover:text-[#a7b4c8]'
+            }`}
+          >
+            <span>{tab.label}</span>
+            <span className="text-[11.5px] font-semibold text-[#8c98ac] dark:text-[#7a8699]">
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {analyze.tab === 'relations' && (
+        <AnalyzeRelationsPlaceholder services={allServices} />
+      )}
+
+      {analyze.tab === 'services' && (
       <div className="flex flex-1 flex-wrap items-start gap-[18px]">
         <aside className="max-w-[320px] min-w-0 flex-1 basis-[260px] overflow-hidden rounded-2xl border border-[#e6eaf0] bg-white shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:border-[#253044] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
           <div className="flex items-center justify-between gap-2.5 border-b border-[#e6eaf0] px-[18px] py-3.5 dark:border-[#253044]">
@@ -220,6 +268,7 @@ export function ProjectAnalyzeView({
           )}
         </section>
       </div>
+      )}
     </div>
   )
 }

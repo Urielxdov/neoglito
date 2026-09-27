@@ -29,11 +29,14 @@ export interface AnalyzeRepoState {
   message: string | null;
 }
 
+export type AnalyzeTab = 'services' | 'relations';
+
 export interface AnalyzeState {
   projectId: number;
   repos: AnalyzeRepoState[];
   collapsed: Record<number, boolean>;
   selectedKey: string | null;
+  tab: AnalyzeTab;
 }
 
 export interface ProjectsState {
@@ -115,7 +118,8 @@ export type ProjectsAction =
     }
   | { type: 'analyze-repo-failed'; repositoryId: number; message: string }
   | { type: 'analyze-group-toggled'; repositoryId: number }
-  | { type: 'analyze-service-selected'; key: string };
+  | { type: 'analyze-service-selected'; key: string }
+  | { type: 'analyze-tab-changed'; tab: AnalyzeTab };
 
 export const initialProjectsState: ProjectsState = {
   status: 'loading',
@@ -375,6 +379,7 @@ export function projectsReducer(
           })),
           collapsed: {},
           selectedKey: null,
+          tab: 'services',
         },
       };
     case 'analyze-closed':
@@ -446,6 +451,14 @@ export function projectsReducer(
       return {
         ...state,
         analyze: { ...state.analyze, selectedKey: action.key },
+      };
+    }
+    case 'analyze-tab-changed': {
+      if (!state.analyze) return state;
+
+      return {
+        ...state,
+        analyze: { ...state.analyze, tab: action.tab },
       };
     }
   }

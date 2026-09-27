@@ -301,6 +301,9 @@ export default function RepositorySelectionPage() {
           onSelectService={(key) =>
             projectsDispatch({ type: 'analyze-service-selected', key })
           }
+          onTabChange={(tab) =>
+            projectsDispatch({ type: 'analyze-tab-changed', tab })
+          }
         />
       ) : projectsState.phase === 'detail' ? (
         <div className="mx-auto mt-[22px] min-h-0 w-full max-w-[960px] flex-1">

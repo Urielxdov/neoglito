@@ -69,6 +69,9 @@ services:
     command: 
       sh -c "npm install &&
              npm --workspace @neoglito/web run dev -- --host 0.0.0.0"
-
+  redis:
+    image: redis:8-alpine
+    ports: "6379:6379"
+    
 volumes:
   postgres_data: 

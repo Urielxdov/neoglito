@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { dirname, resolve, sep } from 'node:path';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { CONTAINER_RUNTIME_PORT } from '../../../shared/application/container-runtime.port.js';
@@ -8,12 +8,13 @@ import { InitDeployProjectUseCase } from './init-deploy-project.use-case.js';
 
 @Injectable()
 export class DeployComposeUseCase {
+  private readonly logger = new Logger(DeployComposeUseCase.name)
   constructor(
     private readonly prisma: PrismaService,
     private readonly cloneRepositories: CloneRepositoriesUseCase,
     private readonly findComposeFiles: InitDeployProjectUseCase,
     @Inject(CONTAINER_RUNTIME_PORT) private readonly runtime: ContainerRuntimePort,
-  ) {}
+  ) { }
 
   async execute(userId: number, projectId: number, composePath: string) {
     const roots = await this.cloneRepositories.execute(userId, projectId);
@@ -27,17 +28,20 @@ export class DeployComposeUseCase {
     try {
       await this.prisma.deployment.update({ where: { id: deployment.id }, data: { status: 'building' } });
       await this.runtime.up(dirname(composeFile), composeFile);
+      this.logger.debug('Hasta aqui bien')
       await this.prisma.deployment.update({ where: { id: deployment.id }, data: { status: 'starting', startedAt: new Date() } });
       const observed = await this.runtime.list(dirname(composeFile), composeFile);
       if (observed.length === 0) throw new Error('Docker Compose no reportó contenedores para el archivo seleccionado');
-      await this.prisma.deploymentService.createMany({ data: observed.map((service) => ({
-        id: service.containerId,
-        composeServiceName: service.composeServiceName,
-        status: service.status,
-        health: service.health,
-        lastObservedAt: new Date(),
-        deploymentId: deployment.id,
-      })) });
+      await this.prisma.deploymentService.createMany({
+        data: observed.map((service) => ({
+          id: service.containerId,
+          composeServiceName: service.composeServiceName,
+          status: service.status,
+          health: service.health,
+          lastObservedAt: new Date(),
+          deploymentId: deployment.id,
+        }))
+      });
       return this.prisma.deployment.update({
         where: { id: deployment.id },
         data: { status: 'running' },
@@ -48,6 +52,8 @@ export class DeployComposeUseCase {
         where: { id: deployment.id },
         data: { status: 'failed', finishedAt: new Date() },
       });
+      this.logger.error(`Error durante el arranque del docker ${error}`)
+
       throw error;
     }
   }
@@ -60,7 +66,7 @@ export class DeployComposeUseCase {
 
 @Injectable()
 export class GetProjectDeploymentsUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async execute(projectId: number) {
     const project = await this.prisma.project.findUnique({ where: { id: projectId }, select: { id: true } });
@@ -74,7 +80,7 @@ export class StopDeploymentUseCase {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(CONTAINER_RUNTIME_PORT) private readonly runtime: ContainerRuntimePort,
-  ) {}
+  ) { }
 
   async execute(deploymentId: string) {
     const deployment = await this.prisma.deployment.findUnique({ where: { id: deploymentId } });

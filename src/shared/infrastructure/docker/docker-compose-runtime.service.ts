@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { spawn } from 'node:child_process';
 import type { ContainerRuntimePort, ContainerRuntimeService } from '../../application/container-runtime.port.js';
 
 @Injectable()
 export class DockerComposeRuntime implements ContainerRuntimePort {
+  private readonly logger = new Logger(DockerComposeRuntime.name)
   async up(path: string, dockerCompose: string): Promise<void> {
     await this.runDockerCompose(path, dockerCompose, ['up', '--build', '-d']);
   }

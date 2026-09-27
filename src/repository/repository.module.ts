@@ -28,11 +28,20 @@ import { GetRepositoriesUseCase } from './application/use-cases/get-repositories
 import { CONTAINER_RUNTIME_PORT } from '../shared/application/container-runtime.port.js';
 import { DockerComposeRuntime } from '../shared/infrastructure/docker/docker-compose-runtime.service.js';
 import { GetProjectComposeFilesUseCase } from './application/use-cases/get-project-compose-files.use-case.js';
-import { DeployComposeUseCase, GetProjectDeploymentsUseCase, StopDeploymentUseCase } from './application/use-cases/deploy-compose.use-case.js';
+import {
+  DeployComposeUseCase,
+  GetProjectDeploymentsUseCase,
+  StopDeploymentUseCase,
+} from './application/use-cases/deploy-compose.use-case.js';
 import { UpdateProjectUseCase } from './application/use-cases/update-project.use-case.js';
+import { CacheModule } from '../shared/infrastructure/cache/cache.module.js';
 
 @Module({
-  imports: [AuthModule, PassportModule.register({ session: false })],
+  imports: [
+    AuthModule,
+    CacheModule,
+    PassportModule.register({ session: false }),
+  ],
   controllers: [ProjectController, DeploymentController, RepositoryController],
   providers: [
     PrismaService,
@@ -81,5 +90,6 @@ import { UpdateProjectUseCase } from './application/use-cases/update-project.use
       useExisting: DockerComposeRuntime,
     },
   ],
+  exports: [PrismaService, CacheModule],
 })
 export class RepositoryModule {}

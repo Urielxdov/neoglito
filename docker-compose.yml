@@ -12,6 +12,7 @@ services:
       NODE_ENV: development
 
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/neoglito
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       ENCRYPTION_SECRET_KEY: ${ENCRYPTION_SECRET_KEY}
       JWT_SECRET: ${JWT_SECRET}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
@@ -30,6 +31,8 @@ services:
     depends_on:
       postgres: # Si este no esta levantado nosotros no levantamos el api
         condition: service_healthy # Espera que se acepten conexiones reales
+      redis:
+        condition: service_healthy
     command: >
       sh -c "npx prisma generate &&
              npx prisma db push &&
@@ -71,7 +74,14 @@ services:
              npm --workspace @neoglito/web run dev -- --host 0.0.0.0"
   redis:
     image: redis:8-alpine
-    ports: "6379:6379"
-    
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
 volumes:
   postgres_data: 

@@ -10,6 +10,7 @@ export interface ContainerRuntimePort {
 export interface ContainerRuntimeService {
   containerId: string;
   composeServiceName: string;
+  port: number;
   status: 'created' | 'running' | 'paused' | 'restarting' | 'exited' | 'dead';
   health: 'starting' | 'healthy' | 'unhealthy' | 'none';
 }

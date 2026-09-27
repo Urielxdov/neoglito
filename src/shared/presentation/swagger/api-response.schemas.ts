@@ -238,6 +238,9 @@ export class DeploymentServiceSchema {
   @ApiProperty({ example: 'api' })
   composeServiceName!: string;
 
+  @ApiProperty({ example: 8080, description: 'Puerto publicado por el contenedor en el host' })
+  port!: number;
+
   @ApiProperty({
     enum: ['created', 'running', 'paused', 'restarting', 'exited', 'dead'],
     example: 'running',

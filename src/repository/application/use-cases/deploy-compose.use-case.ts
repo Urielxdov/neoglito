@@ -36,6 +36,7 @@ export class DeployComposeUseCase {
         data: observed.map((service) => ({
           id: service.containerId,
           composeServiceName: service.composeServiceName,
+          port: service.port,
           status: service.status,
           health: service.health,
           lastObservedAt: new Date(),
@@ -52,7 +53,9 @@ export class DeployComposeUseCase {
         where: { id: deployment.id },
         data: { status: 'failed', finishedAt: new Date() },
       });
-      this.logger.error(`Error durante el arranque del docker ${error}`)
+      this.logger.error(
+        `Error durante el arranque del docker ${error instanceof Error ? error.message : String(error)}`,
+      );
 
       throw error;
     }

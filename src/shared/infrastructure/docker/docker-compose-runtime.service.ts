@@ -29,9 +29,23 @@ export class DockerComposeRuntime implements ContainerRuntimePort {
       const health = ['starting', 'healthy', 'unhealthy', 'none'].includes(rawHealth)
         ? rawHealth
         : 'none';
+      const publishers = Array.isArray(item.Publishers)
+        ? item.Publishers as Array<Record<string, unknown>>
+        : [];
+      const port = publishers
+        .map((publisher) => publisher.PublishedPort)
+        .find((publishedPort): publishedPort is number =>
+          typeof publishedPort === 'number' && publishedPort > 0,
+        );
+      if (port === undefined) {
+        throw new Error(
+          `El contenedor ${asText(item.ID ?? item.Id, '')} no publica un puerto del host`,
+        );
+      }
       return {
         containerId: asText(item.ID ?? item.Id, ''),
         composeServiceName: asText(item.Service, ''),
+        port,
         status: status as ContainerRuntimeService['status'],
         health: health as ContainerRuntimeService['health'],
       };

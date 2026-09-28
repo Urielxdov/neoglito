@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
-import { normalizeText } from '@neoglito/shared/text'
+import { useMemo, useReducer, useState } from 'react'
+import { normalizeText } from '@neoglito/shared'
 import { CreateProjectForm } from '../../components/repositories/create-project-form'
 import { InitializingOverlay } from '../../components/repositories/initializing-overlay'
 import { ProjectDetailModal } from '../../components/repositories/project-detail-modal'
@@ -10,9 +10,10 @@ import type { ProjectInitializationStatus } from '../../components/repositories/
 import { ProjectListItem } from '../../components/repositories/project-list-item'
 import { RepositoryListItem } from '../../components/repositories/repository-list-item'
 import { projectService } from '../../services/project.service'
-import { repositoryService } from '../../services/repository.service'
 import { useAuth } from '../../state/auth/auth.hook'
-import { useRepositories } from '../../state/projects/useRepositories.hook'
+import { useCreateProjectWithRepositories } from '../../state/projects/useCreateProjectWithRepositories.hook'
+import { useProjects } from '../../state/projects/useProjects.hook'
+import { useRepositories } from '../../state/repositories/useRepositories.hook'
 import {
   initialProjectsState,
   projectsReducer,
@@ -35,6 +36,14 @@ export default function RepositorySelectionPage() {
     isError: repositoriesError,
     error: repositoriesErrorMessage,
   } = useRepositories()
+  const {
+    allProjects,
+    isLoading: projectsLoading,
+    isError: projectsError,
+    error: projectsErrorMessage,
+    refresh: refreshProjects,
+  } = useProjects()
+  const { createProjectWithRepositories } = useCreateProjectWithRepositories()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [repositoriesState, repositoriesDispatch] = useReducer(repositoriesReducer, initialRepositoriesState)
   const [projectsState, projectsDispatch] = useReducer(projectsReducer, initialProjectsState)
@@ -51,35 +60,17 @@ export default function RepositorySelectionPage() {
     || normalizeText(repository.description).includes(normalizedQuery)
   ))
 
-  const loadProjects = useCallback(async () => {
-    const response = await projectService.getAll()
-
-    if (response.success && response.data) {
-      projectsDispatch({ type: 'load-succeeded', projects: response.data })
-      return
-    }
-
-    projectsDispatch({
-      type: 'load-failed',
-      message: response.error?.message ?? 'No fue posible cargar los proyectos.',
-    })
-  }, [])
-
-  useEffect(() => {
-    void loadProjects()
-  }, [loadProjects])
-
   const projectCountByRepositoryId = useMemo(() => {
     const counts = new Map<number, number>()
 
-    for (const project of projectsState.projects) {
+    for (const project of allProjects) {
       for (const repository of project.repositories) {
         counts.set(repository.id, (counts.get(repository.id) ?? 0) + 1)
       }
     }
 
     return counts
-  }, [projectsState.projects])
+  }, [allProjects])
 
   const allVisibleRepositoriesSelected = visibleRepositories.length > 0
     && visibleRepositories.every((repository) => repositoriesState.selectedIds.has(repository.id))
@@ -88,7 +79,7 @@ export default function RepositorySelectionPage() {
     repositoriesState.selectedIds.has(repository.id)
   ))
 
-  const nameTaken = projectsState.newName.trim().length > 0 && projectsState.projects.some((project) => (
+  const nameTaken = projectsState.newName.trim().length > 0 && allProjects.some((project) => (
     normalizeText(project.name) === normalizeText(projectsState.newName)
   ))
 
@@ -112,58 +103,36 @@ export default function RepositorySelectionPage() {
   const handleCreateProject = async () => {
     if (!canCreateProject) return
 
-    const name = projectsState.newName.trim()
-    const description = projectsState.newDescription.trim()
-    const repositoriesToLink = selectedRepositories
-    const total = repositoriesToLink.length + 1
-
     projectsDispatch({ type: 'creation-submitting' })
-    projectsDispatch({ type: 'creation-progress', done: 0, total, label: 'Creando proyecto' })
+    projectsDispatch({
+      type: 'creation-progress',
+      done: 0,
+      total: 1,
+      label: 'Creando proyecto y vinculando repositorios',
+    })
 
-    const projectResponse = await projectService.create({ name, description })
+    try {
+      const project = await createProjectWithRepositories({
+        projectProperties: {
+          name: projectsState.newName,
+          description: projectsState.newDescription,
+        },
+        repositories: selectedRepositories,
+      })
 
-    if (!projectResponse.success || !projectResponse.data) {
+      projectsDispatch({ type: 'creation-succeeded', projectId: project.id })
+      repositoriesDispatch({ type: 'selection-cleared' })
+    } catch (error) {
       projectsDispatch({
         type: 'creation-failed',
-        message: projectResponse.error?.message ?? 'No fue posible crear el proyecto.',
+        message: error instanceof Error ? error.message : 'No fue posible crear el proyecto.',
       })
-      return
+    } finally {
+      await refreshProjects()
     }
-
-    const projectId = projectResponse.data.id
-
-    for (const [index, repository] of repositoriesToLink.entries()) {
-      projectsDispatch({
-        type: 'creation-progress',
-        done: index + 1,
-        total,
-        label: `Vinculando ${shortName(repository.name)}`,
-      })
-
-      const linkResponse = await repositoryService.create({
-        projectId,
-        id: repository.id,
-        name: repository.name,
-        gitUrl: repository.gitUrl,
-        cloneUrl: repository.cloneUrl,
-      })
-
-      if (!linkResponse.success) {
-        projectsDispatch({
-          type: 'creation-failed',
-          message: `El proyecto se creó, pero no fue posible vincular ${repository.name}: ${linkResponse.error?.message ?? 'error desconocido'}`,
-        })
-        await loadProjects()
-        return
-      }
-    }
-
-    projectsDispatch({ type: 'creation-succeeded', projectId })
-    repositoriesDispatch({ type: 'selection-cleared' })
-    await loadProjects()
   }
 
-  const openProject = projectsState.projects.find((project) => project.id === projectsState.openId) ?? null
+  const openProject = allProjects.find((project) => project.id === projectsState.openId) ?? null
 
   const openProjectRepositories: ProjectDetailRepository[] = openProject
     ? openProject.repositories.map((linkedRepository) => {
@@ -181,7 +150,7 @@ export default function RepositorySelectionPage() {
     })
     : []
 
-  const activeProject = projectsState.projects.find((project) => project.id === projectsState.activeId) ?? null
+  const activeProject = allProjects.find((project) => project.id === projectsState.activeId) ?? null
 
   const activeProjectRepositories: ProjectDetailRepositoryInfo[] = activeProject
     ? activeProject.repositories.map((linkedRepository) => {
@@ -371,7 +340,7 @@ export default function RepositorySelectionPage() {
                 <span className="min-w-0 flex-1">
                   <span className="block text-[17px] font-semibold">Proyectos</span>
                   <span className="mt-0.5 block text-[13px] text-[#8c98ac] dark:text-[#a7b4c8]">
-                    {projectsState.projects.length} {projectsState.projects.length === 1 ? 'proyecto' : 'proyectos'} · un repositorio puede estar en varios
+                    {allProjects.length} {allProjects.length === 1 ? 'proyecto' : 'proyectos'} · un repositorio puede estar en varios
                   </span>
                 </span>
               </header>
@@ -397,10 +366,12 @@ export default function RepositorySelectionPage() {
                 )}
 
                 <div className="flex flex-col gap-[10px]">
-                  {projectsState.status === 'loading' ? (
+                  {projectsLoading ? (
                     <p className="px-4 py-8 text-center text-[13px] text-[#8c98ac]">Cargando proyectos...</p>
-                  ) : projectsState.projects.length > 0 ? (
-                    projectsState.projects.map((project) => (
+                  ) : projectsError ? (
+                    <p className="px-4 py-8 text-center text-[13px] text-[#c2410c] dark:text-[#fb923c]">{projectsErrorMessage}</p>
+                  ) : allProjects.length > 0 ? (
+                    allProjects.map((project) => (
                       <ProjectListItem
                         key={project.id}
                         project={project}

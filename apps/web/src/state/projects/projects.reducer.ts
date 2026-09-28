@@ -1,7 +1,3 @@
-import type { ProjectResponse } from '../../api/contracts'
-import type { Project } from '../../models/project'
-
-export type ProjectsStatus = 'loading' | 'ready' | 'error'
 export type ProjectsPhase = 'list' | 'detail'
 
 export interface DeployEnvVar {
@@ -16,8 +12,6 @@ export interface CreationProgress {
 }
 
 export interface ProjectsState {
-  status: ProjectsStatus
-  projects: Project[]
   creating: boolean
   submitting: boolean
   newName: string
@@ -34,8 +28,6 @@ export interface ProjectsState {
 }
 
 export type ProjectsAction =
-  | { type: 'load-succeeded'; projects: ProjectResponse[] }
-  | { type: 'load-failed'; message: string }
   | { type: 'creation-opened' }
   | { type: 'creation-cancelled' }
   | { type: 'name-changed'; name: string }
@@ -56,8 +48,6 @@ export type ProjectsAction =
   | { type: 'deploy-configured'; projectId: number }
 
 export const initialProjectsState: ProjectsState = {
-  status: 'loading',
-  projects: [],
   creating: false,
   submitting: false,
   newName: '',
@@ -73,31 +63,12 @@ export const initialProjectsState: ProjectsState = {
   configuredProjectIds: new Set(),
 }
 
-function toProject(project: ProjectResponse): Project {
-  return {
-    id: project.id,
-    name: project.name,
-    description: project.description,
-    createdAt: new Date(project.createdAt),
-    updatedAt: new Date(project.updatedAt),
-    repositories: project.repositories,
-  }
-}
-
 function projectIdFromKey(key: string): number {
   return Number(key.split(':')[0])
 }
 
 export function projectsReducer(state: ProjectsState, action: ProjectsAction): ProjectsState {
   switch (action.type) {
-    case 'load-succeeded':
-      return {
-        ...state,
-        status: 'ready',
-        projects: action.projects.map(toProject),
-      }
-    case 'load-failed':
-      return { ...state, status: 'error', message: action.message }
     case 'creation-opened':
       return { ...state, creating: true, message: null }
     case 'creation-cancelled':

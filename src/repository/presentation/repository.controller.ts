@@ -9,6 +9,13 @@ import type { CloneRepositoryResponse } from "@neoglito/shared/repository";
 import { JwtAuthGuard } from "../../auth/infrastructure/passport/jwt-auth.guard.js";
 import type { AuthenticatedRequest } from "../../shared/presentation/http/authenticated-request.js";
 import { GetRepositoriesUseCase } from "../application/use-cases/get-repositories.use-case.js";
+import { getSchemaPath, ApiBearerAuth, ApiBody, ApiOperation, ApiUnauthorizedResponse } from "@nestjs/swagger";
+import {
+    ApiSuccessResponseDoc,
+    CloneRepositoryDataSchema,
+    CreateRepositoryDataSchema,
+    GitHubRepositorySchema,
+} from "../../shared/presentation/swagger/api-response.schemas.js";
 
 
 @Controller('repository')
@@ -17,9 +24,17 @@ export class RepositoryController {
         private readonly createRepositoryUseCase: CreateRepositoryUseCase,
         private readonly cloneRepositoryUseCase: CloneRepositoryUseCase,
         private readonly getRepositories: GetRepositoriesUseCase
-    ) {}
+    ) { }
 
     @Post('registry')
+    @ApiOperation({ description: 'Se guarda la informacion relevante de un repositorio' })
+    @ApiBody({ type: CreateRepositoryDto })
+    @ApiSuccessResponseDoc({
+        status: 201,
+        description: 'Informacion del repositorio guardada correctamente',
+        dataSchema: { $ref: getSchemaPath(CreateRepositoryDataSchema) },
+        extraModels: [CreateRepositoryDataSchema],
+    })
     async registryRepository(
         @Body() dto: CreateRepositoryDto,
     ): Promise<CreateRepositoryResponse> {
@@ -36,6 +51,16 @@ export class RepositoryController {
 
     @Post('clone')
     @UseGuards(JwtAuthGuard)
+    @ApiOperation({ description: 'Clona el repositorio en el backend' })
+    @ApiBody({ type: CloneRepositoryDto })
+    @ApiSuccessResponseDoc({
+        status: 201,
+        description: 'Repositorio clonado correctamente',
+        dataSchema: { $ref: getSchemaPath(CloneRepositoryDataSchema) },
+        extraModels: [CloneRepositoryDataSchema],
+    })
+    @ApiUnauthorizedResponse({ description: 'Usuario no autenticado' })
+    @ApiBearerAuth()
     async cloneRepository(
         @Req() request: AuthenticatedRequest,
         @Body() dto: CloneRepositoryDto,
@@ -46,6 +71,15 @@ export class RepositoryController {
 
     @Get('all')
     @UseGuards(JwtAuthGuard)
+    @ApiOperation({ description: 'Obtiene todos los repositorios asociados a un usuario autenticado' })
+    @ApiSuccessResponseDoc({
+        status: 200,
+        description: 'Repositorios asociados al usuario autenticado',
+        dataSchema: { type: 'array', items: { $ref: getSchemaPath(GitHubRepositorySchema) } },
+        extraModels: [GitHubRepositorySchema],
+    })
+    @ApiUnauthorizedResponse({ description: 'Usuario no autenticado' })
+    @ApiBearerAuth()
     async all(@Req() request: AuthenticatedRequest) {
         return await this.getRepositories.execute(request.user.id)
     }

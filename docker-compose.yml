@@ -7,13 +7,19 @@ services:
     volumes:
       - .:/app # Carpeta actual -> carpeta a la que vamos a mandar el cotenido dentro del contenedor
       - /app/node_modules # aisla el node_modules del contenedor
+      - /var/run/docker.sock:/var/run/docker.sock # Permite usar el daemon de Docker del host
     environment:
       NODE_ENV: development
 
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/neoglito
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       ENCRYPTION_SECRET_KEY: ${ENCRYPTION_SECRET_KEY}
       JWT_SECRET: ${JWT_SECRET}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:3000}
+      GITHUB_CALLBACK_URL: ${GITHUB_CALLBACK_URL:-http://localhost:3000/auth/github/callback}
       NODE_TLS_REJECT_UNAUTHORIZED: ${NODE_TLS_REJECT_UNAUTHORIZED:-1}
       # URL para conectarnos a PostgreSQL
       # postgres:postgres → usuario:contraseña
@@ -25,6 +31,8 @@ services:
     depends_on:
       postgres: # Si este no esta levantado nosotros no levantamos el api
         condition: service_healthy # Espera que se acepten conexiones reales
+      redis:
+        condition: service_healthy
     command: >
       sh -c "npx prisma generate &&
              npx prisma db push &&
@@ -59,9 +67,21 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
     command: 
       sh -c "npm install &&
              npm --workspace @neoglito/web run dev -- --host 0.0.0.0"
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
 volumes:
   postgres_data: 

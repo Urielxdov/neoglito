@@ -13,6 +13,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
+      '@neoglito/web': fileURLToPath(new URL('./src', import.meta.url)),
       '@neoglito/shared': fileURLToPath(new URL('../../packages/shared/src/index.ts', import.meta.url)),
     },
   },

@@ -1,4 +1,4 @@
-import type { RepositoryResponse } from '../api/contracts'
+import type { RepositoryResponse } from "@neoglito/web/api/contracts"
 
 export interface Repository extends RepositoryResponse {
   updatedAt: string

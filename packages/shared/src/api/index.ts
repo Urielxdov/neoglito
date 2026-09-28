@@ -1,2 +1,2 @@
-export type { IsoDateString } from './iso-date-string.js'
-export type { ApiError, ApiMeta, ApiResponse } from './api-response.js'
+export type { IsoDateString } from '@neoglito/shared/api/iso-date-string'
+export type { ApiError, ApiMeta, ApiResponse } from '@neoglito/shared/api/api-response'

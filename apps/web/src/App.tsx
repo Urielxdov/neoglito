@@ -1,19 +1,22 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import AuthenticationPage from './pages/authentication/authentication-page'
-import RepositorySelectionPage from './pages/repositories/repository-selection-page'
-import { ProtectedRoute } from './router/protected-route'
+import AuthenticationPage from "@neoglito/web/pages/authentication/authentication-page"
+import RepositorySelectionPage from "@neoglito/web/pages/repositories/repository-selection-page"
+import { ProtectedRoute } from "@neoglito/web/router/protected-route"
+import { AuthProvider } from "@neoglito/web/state/auth/auth-context"
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<ProtectedRoute />}>
-          <Route index element={<RepositorySelectionPage />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
           <Route path="authentication" element={<AuthenticationPage />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          <Route element={<ProtectedRoute />}>
+            <Route index element={<RepositorySelectionPage />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 

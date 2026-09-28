@@ -1,8 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { toProject } from '../../mappers/project.mapper'
+import type { Project } from '../../models/project'
 import { createProjectSchema } from '../../schemas/create-project.schema'
 import { projectService } from '../../services/project.service.js'
 import type { CreateProjectRequest } from '@neoglito/shared'
+
+const emptyProjects: Project[] = []
 
 export function useProjects() {
   const query = useQuery({
@@ -32,7 +35,7 @@ export function useProjects() {
   })
 
   return {
-    allProjects: query.data ?? [],
+    allProjects: query.data ?? emptyProjects,
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error?.message ?? null,

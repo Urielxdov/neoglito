@@ -7,6 +7,9 @@ import { RepositoryListItem } from "@neoglito/web/components/repositories/reposi
 interface RepositorySelectionPanelProps {
   allVisibleRepositoriesSelected: boolean;
   projectCountByRepositoryId: Map<number, number>;
+  repositories: Repository[];
+  repositoriesLoading: boolean;
+  repositoriesError: string | null;
   repositoriesState: RepositoriesState;
   userName?: string;
   visibleRepositories: Repository[];
@@ -20,6 +23,9 @@ interface RepositorySelectionPanelProps {
 export function RepositorySelectionPanel({
   allVisibleRepositoriesSelected,
   projectCountByRepositoryId,
+  repositories,
+  repositoriesLoading,
+  repositoriesError,
   repositoriesState,
   userName,
   visibleRepositories,
@@ -66,7 +72,9 @@ export function RepositorySelectionPanel({
             type="button"
             onClick={onVisibleRepositoriesToggle}
             disabled={
-              repositoriesState.status !== 'ready' ||
+              repositoriesLoading ||
+              repositoriesError !== null ||
+              repositories.length === 0 ||
               visibleRepositories.length === 0
             }
             className="h-[42px] shrink-0 rounded-lg border border-[#d6dce5] bg-white px-4 text-[12.5px] font-semibold whitespace-nowrap text-[#394b6a] hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#35435a] dark:bg-[#111826] dark:text-[#c1cbe0]"
@@ -78,13 +86,13 @@ export function RepositorySelectionPanel({
         </div>
 
         <div className="mt-4 min-h-0 flex-1 overflow-y-auto rounded-lg border border-[#e0e6ef] dark:border-[#253044]">
-          {repositoriesState.status === 'loading' ? (
+          {repositoriesLoading ? (
             <p className="px-4 py-8 text-center text-[13px] text-[#8c98ac]">
               Cargando repositorios...
             </p>
-          ) : repositoriesState.status === 'error' ? (
+          ) : repositoriesError ? (
             <p className="px-4 py-8 text-center text-[13px] text-[#c2410c] dark:text-[#fb923c]">
-              {repositoriesState.message}
+              {repositoriesError}
             </p>
           ) : visibleRepositories.length > 0 ? (
             visibleRepositories.map((repository) => (

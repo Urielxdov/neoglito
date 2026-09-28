@@ -18,6 +18,9 @@ interface ProjectsPanelProps {
   activeProject: Project | null;
   activeProjectRepositories: ProjectDetailRepositoryInfo[];
   canCreateProject: boolean;
+  projects: Project[];
+  projectsLoading: boolean;
+  projectsError: string | null;
   nameTaken: boolean;
   projectsDispatch: Dispatch<ProjectsAction>;
   projectsState: ProjectsState;
@@ -36,6 +39,9 @@ export function ProjectsPanel({
   activeProject,
   activeProjectRepositories,
   canCreateProject,
+  projects,
+  projectsLoading,
+  projectsError,
   nameTaken,
   projectsDispatch,
   projectsState,
@@ -116,8 +122,8 @@ export function ProjectsPanel({
             <span className="min-w-0 flex-1">
               <span className="block text-[17px] font-semibold">Proyectos</span>
               <span className="mt-0.5 block text-[13px] text-[#8c98ac] dark:text-[#a7b4c8]">
-                {projectsState.projects.length}{' '}
-                {projectsState.projects.length === 1 ? 'proyecto' : 'proyectos'}{' '}
+                {projects.length}{' '}
+                {projects.length === 1 ? 'proyecto' : 'proyectos'}{' '}
                 · un repositorio puede estar en varios
               </span>
             </span>
@@ -150,19 +156,19 @@ export function ProjectsPanel({
               />
             )}
 
-            {projectsState.message && (
+            {projectsError && (
               <p className="text-[12.5px] text-[#c2410c] dark:text-[#fb923c]">
-                {projectsState.message}
+                {projectsError}
               </p>
             )}
 
             <div className="flex flex-col gap-[10px]">
-              {projectsState.status === 'loading' ? (
+              {projectsLoading ? (
                 <p className="px-4 py-8 text-center text-[13px] text-[#8c98ac]">
                   Cargando proyectos...
                 </p>
-              ) : projectsState.projects.length > 0 ? (
-                projectsState.projects.map((project) => (
+              ) : projects.length > 0 ? (
+                projects.map((project) => (
                   <ProjectListItem
                     key={project.id}
                     project={project}

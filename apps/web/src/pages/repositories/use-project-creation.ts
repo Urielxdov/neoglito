@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import type { Dispatch } from 'react';
 import type { Repository } from "@neoglito/web/models/repository";
 import { repositoryService } from "@neoglito/web/services/repository.service";
@@ -31,19 +31,25 @@ export function useProjectCreation({
   repositoriesDispatch,
   selectedRepositories,
 }: UseProjectCreationOptions) {
+  const [creationError, setCreationError] = useState<string | null>(null);
+
   const handleClearSelection = useCallback(() => {
+    setCreationError(null);
     repositoriesDispatch({ type: 'selection-cleared' });
     projectsDispatch({ type: 'creation-cancelled' });
   }, [projectsDispatch, repositoriesDispatch]);
 
   const handleNewProject = useCallback(() => {
     if (selectedRepositories.length > 0) {
+      setCreationError(null);
       projectsDispatch({ type: 'creation-opened' });
     }
   }, [projectsDispatch, selectedRepositories.length]);
 
   const handleCreateProject = useCallback(async () => {
     if (!canCreateProject) return;
+
+    setCreationError(null);
 
     const name = projectsState.newName.trim();
     const description = projectsState.newDescription.trim();
@@ -61,10 +67,11 @@ export function useProjectCreation({
     const projectResponse = await projectService.create({ name, description });
 
     if (!projectResponse.success || !projectResponse.data) {
+      setCreationError(
+        projectResponse.error?.message ?? 'No fue posible crear el proyecto.',
+      );
       projectsDispatch({
         type: 'creation-failed',
-        message:
-          projectResponse.error?.message ?? 'No fue posible crear el proyecto.',
       });
       return;
     }
@@ -88,9 +95,11 @@ export function useProjectCreation({
       });
 
       if (!linkResponse.success) {
+        setCreationError(
+          `El proyecto se creó, pero no fue posible vincular ${repository.name}: ${linkResponse.error?.message ?? 'error desconocido'}`,
+        );
         projectsDispatch({
           type: 'creation-failed',
-          message: `El proyecto se creó, pero no fue posible vincular ${repository.name}: ${linkResponse.error?.message ?? 'error desconocido'}`,
         });
         await loadProjects();
         return;
@@ -107,11 +116,12 @@ export function useProjectCreation({
     const initResponse = await projectService.init({ projectId });
 
     if (!initResponse.success || !initResponse.data) {
+      setCreationError(
+        initResponse.error?.message ??
+          'El proyecto se creó, pero no fue posible inicializar el despliegue.',
+      );
       projectsDispatch({
         type: 'creation-failed',
-        message:
-          initResponse.error?.message ??
-          'El proyecto se creó, pero no fue posible inicializar el despliegue.',
       });
       await loadProjects();
       return;
@@ -145,6 +155,7 @@ export function useProjectCreation({
   ]);
 
   return {
+    creationError,
     handleClearSelection,
     handleCreateProject,
     handleNewProject,

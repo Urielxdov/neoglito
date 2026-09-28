@@ -1,8 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { toRepository } from '../../mappers/repository.mapper.js'
+import type { Repository } from '../../models/repository'
 import { createRepositorySchema } from '../../schemas/create-repository.schema'
 import { repositoryService } from '../../services/repository.service.js'
 import type { CreateRepositoryRequest } from '@neoglito/shared'
+
+const emptyRepositories: Repository[] = []
 
 export function useRepositories() {
   const query = useQuery({
@@ -31,7 +34,7 @@ export function useRepositories() {
   })
 
   return {
-    allRepositories: query.data ?? [],
+    allRepositories: query.data ?? emptyRepositories,
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error?.message ?? null,

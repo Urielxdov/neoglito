@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import { useCallback, useMemo, useReducer, useState } from 'react';
 import { Moon, Sun } from 'lucide';
 import { ProjectAnalyzeView } from "@neoglito/web/components/repositories/project-analyze-view";
 import { ProjectDetailModal } from "@neoglito/web/components/repositories/project-detail-modal";
@@ -6,16 +6,17 @@ import { ProjectsPanel } from "@neoglito/web/components/repositories/projects-pa
 import { RepositorySelectionPanel } from "@neoglito/web/components/repositories/repository-selection-panel";
 import { AppIcon } from "@neoglito/web/components/ui/app-icon";
 import { projectService } from "@neoglito/web/services/project.service";
-import { repositoryService } from "@neoglito/web/services/repository.service";
 import { useAuth } from "@neoglito/web/state/auth/auth-context";
 import {
   initialProjectsState,
   projectsReducer,
 } from "@neoglito/web/state/projects/projects.reducer";
+import { useProjects } from "@neoglito/web/state/projects/useProjects.hook";
 import {
   initialRepositoriesState,
   repositoriesReducer,
 } from "@neoglito/web/state/repositories/repositories.reducer";
+import { useRepositories } from "@neoglito/web/state/repositories/useRepositories.hook";
 import {
   getProjectCountByRepositoryId,
   getProjectDeployRepositories,
@@ -31,7 +32,21 @@ import { useProjectCreation } from "@neoglito/web/pages/repositories/use-project
 
 export default function RepositorySelectionPage() {
   const { user } = useAuth();
+  const {
+    allRepositories,
+    isLoading: repositoriesLoading,
+    isError: repositoriesError,
+    error: repositoriesErrorMessage,
+  } = useRepositories();
+  const {
+    allProjects,
+    isLoading: projectsLoading,
+    isError: projectsError,
+    error: projectsErrorMessage,
+    refresh: loadProjects,
+  } = useProjects();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [deployError, setDeployError] = useState<string | null>(null);
   const [repositoriesState, repositoriesDispatch] = useReducer(
     repositoriesReducer,
     initialRepositoriesState,
@@ -43,67 +58,26 @@ export default function RepositorySelectionPage() {
 
   const dark = theme === 'dark';
 
-  useEffect(() => {
-    const loadRepositories = async () => {
-      const response = await repositoryService.getAll();
-
-      if (response.success && response.data) {
-        repositoriesDispatch({
-          type: 'load-succeeded',
-          repositories: response.data,
-        });
-        return;
-      }
-
-      repositoriesDispatch({
-        type: 'load-failed',
-        message:
-          response.error?.message ?? 'No fue posible cargar los repositorios.',
-      });
-    };
-
-    void loadRepositories();
-  }, []);
-
-  const loadProjects = useCallback(async () => {
-    const response = await projectService.getAll();
-
-    if (response.success && response.data) {
-      projectsDispatch({ type: 'load-succeeded', projects: response.data });
-      return;
-    }
-
-    projectsDispatch({
-      type: 'load-failed',
-      message:
-        response.error?.message ?? 'No fue posible cargar los proyectos.',
-    });
-  }, []);
-
-  useEffect(() => {
-    void loadProjects();
-  }, [loadProjects]);
-
   const visibleRepositories = useMemo(
     () =>
       getVisibleRepositories(
-        repositoriesState.repositories,
+        allRepositories,
         repositoriesState.query,
       ),
-    [repositoriesState.query, repositoriesState.repositories],
+    [allRepositories, repositoriesState.query],
   );
 
   const projectCountByRepositoryId = useMemo(
-    () => getProjectCountByRepositoryId(projectsState.projects),
-    [projectsState.projects],
+    () => getProjectCountByRepositoryId(allProjects),
+    [allProjects],
   );
 
   const selectedRepositories = useMemo(
     () =>
-      repositoriesState.repositories.filter((repository) =>
+      allRepositories.filter((repository) =>
         repositoriesState.selectedIds.has(repository.id),
       ),
-    [repositoriesState.repositories, repositoriesState.selectedIds],
+    [allRepositories, repositoriesState.selectedIds],
   );
 
   const allVisibleRepositoriesSelected =
@@ -113,7 +87,7 @@ export default function RepositorySelectionPage() {
     );
 
   const nameTaken = isProjectNameTaken(
-    projectsState.projects,
+    allProjects,
     projectsState.newName,
   );
 
@@ -124,7 +98,12 @@ export default function RepositorySelectionPage() {
     selectedRepositories.length > 0 &&
     !projectsState.submitting;
 
-  const { handleClearSelection, handleCreateProject, handleNewProject } =
+  const {
+    creationError,
+    handleClearSelection,
+    handleCreateProject,
+    handleNewProject,
+  } =
     useProjectCreation({
       canCreateProject,
       loadProjects,
@@ -134,14 +113,19 @@ export default function RepositorySelectionPage() {
       selectedRepositories,
     });
 
+  const projectsPanelError = projectsError
+    ? projectsErrorMessage ?? 'No fue posible cargar los proyectos.'
+    : creationError ?? deployError;
+
   const { startAnalysis } = useProjectAnalysis({ projectsDispatch });
 
   const openProject =
-    projectsState.projects.find(
+    allProjects.find(
       (project) => project.id === projectsState.openId,
     ) ?? null;
+
   const activeProject =
-    projectsState.projects.find(
+    allProjects.find(
       (project) => project.id === projectsState.activeId,
     ) ?? null;
 
@@ -149,26 +133,26 @@ export default function RepositorySelectionPage() {
     () =>
       getProjectDetailRepositories(
         openProject,
-        repositoriesState.repositories,
+        allRepositories,
         projectCountByRepositoryId,
       ),
-    [openProject, projectCountByRepositoryId, repositoriesState.repositories],
+    [openProject, projectCountByRepositoryId, allRepositories],
   );
 
   const activeProjectRepositories = useMemo(
     () =>
       getProjectDeployRepositories(
         activeProject,
-        repositoriesState.repositories,
+        allRepositories,
       ),
-    [activeProject, repositoriesState.repositories],
+    [activeProject, allRepositories],
   );
 
   const handleOpenProject = useCallback(
     async (projectId: number) => {
       projectsDispatch({ type: 'project-opened', id: projectId });
 
-      const project = projectsState.projects.find(
+      const project = allProjects.find(
         (candidate) => candidate.id === projectId,
       );
 
@@ -179,16 +163,16 @@ export default function RepositorySelectionPage() {
       const response = await projectService.environmentVariables({ projectId });
 
       if (!response.success || !response.data) {
-        projectsDispatch({
-          type: 'deploy-paths-discovery-failed',
-          message:
-            response.error?.message ??
+        setDeployError(
+          response.error?.message ??
             'No fue posible buscar los archivos Docker del proyecto.',
-        });
+        );
         return;
       }
 
-      const repositories = repositoriesState.repositories.filter((repository) =>
+      setDeployError(null);
+
+      const repositories = allRepositories.filter((repository) =>
         project.repositories.some(
           (projectRepository) => projectRepository.id === repository.id,
         ),
@@ -218,14 +202,14 @@ export default function RepositorySelectionPage() {
         ),
       });
     },
-    [projectsState.projects, repositoriesState.repositories],
+    [allProjects, allRepositories],
   );
 
   const editName = projectsState.editName ?? activeProject?.name ?? '';
   const editDescription =
     projectsState.editDescription ?? activeProject?.description ?? '';
   const editNameTaken = isProjectNameTaken(
-    projectsState.projects,
+    allProjects,
     editName,
     activeProject?.id,
   );
@@ -261,8 +245,9 @@ export default function RepositorySelectionPage() {
       return;
     }
 
-    projectsDispatch({ type: 'edit-succeeded', project: response.data });
-  }, [activeProject, editClean, editDescription, editName, editNameTaken]);
+    projectsDispatch({ type: 'edit-succeeded' });
+    await loadProjects();
+  }, [activeProject, editClean, editDescription, editName, editNameTaken, loadProjects]);
 
   const handleAnalyze = useCallback(() => {
     if (!activeProject) return;
@@ -311,6 +296,9 @@ export default function RepositorySelectionPage() {
             activeProject={activeProject}
             activeProjectRepositories={activeProjectRepositories}
             canCreateProject={canCreateProject}
+            projects={allProjects}
+            projectsLoading={projectsLoading}
+            projectsError={projectsPanelError}
             nameTaken={nameTaken}
             projectsDispatch={projectsDispatch}
             projectsState={projectsState}
@@ -330,6 +318,13 @@ export default function RepositorySelectionPage() {
           <RepositorySelectionPanel
             allVisibleRepositoriesSelected={allVisibleRepositoriesSelected}
             projectCountByRepositoryId={projectCountByRepositoryId}
+            repositories={allRepositories}
+            repositoriesLoading={repositoriesLoading}
+            repositoriesError={
+              repositoriesError
+                ? repositoriesErrorMessage ?? 'No fue posible cargar los repositorios.'
+                : null
+            }
             repositoriesState={repositoriesState}
             userName={user?.username}
             visibleRepositories={visibleRepositories}
@@ -353,6 +348,9 @@ export default function RepositorySelectionPage() {
             activeProject={activeProject}
             activeProjectRepositories={activeProjectRepositories}
             canCreateProject={canCreateProject}
+            projects={allProjects}
+            projectsLoading={projectsLoading}
+            projectsError={projectsPanelError}
             nameTaken={nameTaken}
             projectsDispatch={projectsDispatch}
             projectsState={projectsState}

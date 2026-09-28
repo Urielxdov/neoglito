@@ -1,10 +1,7 @@
 import type {
   DeploymentResponse,
-  ProjectResponse,
 } from "@neoglito/web/api/contracts";
-import type { Project } from "@neoglito/web/models/project";
 
-export type ProjectsStatus = 'loading' | 'ready' | 'error';
 export type ProjectsPhase = 'list' | 'detail' | 'analyze';
 export type ProjectsDetailTab = 'deploy' | 'routes' | 'repos' | 'general';
 
@@ -40,14 +37,11 @@ export interface AnalyzeState {
 }
 
 export interface ProjectsState {
-  status: ProjectsStatus;
-  projects: Project[];
   creating: boolean;
   submitting: boolean;
   newName: string;
   newDescription: string;
   openId: number | null;
-  message: string | null;
   phase: ProjectsPhase;
   activeId: number | null;
   progress: CreationProgress | null;
@@ -65,15 +59,13 @@ export interface ProjectsState {
 }
 
 export type ProjectsAction =
-  | { type: 'load-succeeded'; projects: ProjectResponse[] }
-  | { type: 'load-failed'; message: string }
   | { type: 'creation-opened' }
   | { type: 'creation-cancelled' }
   | { type: 'name-changed'; name: string }
   | { type: 'description-changed'; description: string }
   | { type: 'creation-submitting' }
   | { type: 'creation-progress'; done: number; total: number; label: string }
-  | { type: 'creation-failed'; message: string }
+  | { type: 'creation-failed' }
   | { type: 'creation-succeeded'; projectId: number }
   | { type: 'project-opened'; id: number }
   | { type: 'project-closed' }
@@ -91,7 +83,6 @@ export type ProjectsAction =
       field: 'key' | 'value';
       value: string;
     }
-  | { type: 'deploy-paths-discovery-failed'; message: string }
   | {
       type: 'deploy-env-discovered';
       projectId: number;
@@ -107,7 +98,7 @@ export type ProjectsAction =
   | { type: 'edit-description-changed'; description: string }
   | { type: 'edit-reset' }
   | { type: 'edit-submitting' }
-  | { type: 'edit-succeeded'; project: ProjectResponse }
+  | { type: 'edit-succeeded' }
   | { type: 'edit-failed'; message: string }
   | { type: 'analyze-opened'; projectId: number; repositoryIds: number[] }
   | { type: 'analyze-closed' }
@@ -122,14 +113,11 @@ export type ProjectsAction =
   | { type: 'analyze-tab-changed'; tab: AnalyzeTab };
 
 export const initialProjectsState: ProjectsState = {
-  status: 'loading',
-  projects: [],
   creating: false,
   submitting: false,
   newName: '',
   newDescription: '',
   openId: null,
-  message: null,
   phase: 'list',
   activeId: null,
   progress: null,
@@ -146,46 +134,26 @@ export const initialProjectsState: ProjectsState = {
   analyze: null,
 };
 
-function toProject(project: ProjectResponse): Project {
-  return {
-    id: project.id,
-    name: project.name,
-    description: project.description,
-    createdAt: new Date(project.createdAt),
-    updatedAt: new Date(project.updatedAt),
-    repositories: project.repositories,
-  };
-}
-
 export function projectsReducer(
   state: ProjectsState,
   action: ProjectsAction,
 ): ProjectsState {
   switch (action.type) {
-    case 'load-succeeded':
-      return {
-        ...state,
-        status: 'ready',
-        projects: action.projects.map(toProject),
-      };
-    case 'load-failed':
-      return { ...state, status: 'error', message: action.message };
     case 'creation-opened':
-      return { ...state, creating: true, message: null };
+      return { ...state, creating: true };
     case 'creation-cancelled':
       return {
         ...state,
         creating: false,
         newName: '',
         newDescription: '',
-        message: null,
       };
     case 'name-changed':
       return { ...state, newName: action.name };
     case 'description-changed':
       return { ...state, newDescription: action.description };
     case 'creation-submitting':
-      return { ...state, submitting: true, message: null, progress: null };
+      return { ...state, submitting: true, progress: null };
     case 'creation-progress':
       return {
         ...state,
@@ -199,7 +167,6 @@ export function projectsReducer(
       return {
         ...state,
         submitting: false,
-        message: action.message,
         progress: null,
       };
     case 'creation-succeeded':
@@ -209,7 +176,6 @@ export function projectsReducer(
         creating: false,
         newName: '',
         newDescription: '',
-        message: null,
         progress: null,
         phase: 'detail',
         activeId: action.projectId,
@@ -276,13 +242,10 @@ export function projectsReducer(
 
       return {
         ...state,
-        message: null,
         deployPaths,
         deployPathCandidates,
       };
     }
-    case 'deploy-paths-discovery-failed':
-      return { ...state, message: action.message };
     case 'deploy-env-row-added': {
       const rows = state.deployEnv[action.key] ?? [];
 
@@ -357,11 +320,6 @@ export function projectsReducer(
         editDescription: null,
         editSaved: true,
         editMessage: null,
-        projects: state.projects.map((project) =>
-          project.id === action.project.id
-            ? toProject(action.project)
-            : project,
-        ),
       };
     case 'edit-failed':
       return { ...state, editSubmitting: false, editMessage: action.message };

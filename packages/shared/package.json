@@ -20,6 +20,10 @@
       "types": "./src/repository/index.ts",
       "import": "./src/repository/index.ts"
     },
+    "./text": {
+      "types": "./src/text/index.ts",
+      "import": "./src/text/index.ts"
+    },
     "./package.json": "./package.json"
   }
 }

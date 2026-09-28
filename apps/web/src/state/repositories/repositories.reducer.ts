@@ -1,47 +1,17 @@
-import type { RepositoryResponse } from '../../api/contracts'
-import type { Repository } from '../../models/repository'
-
-export type RepositoriesStatus = 'loading' | 'ready' | 'error'
-
 export interface RepositoriesState {
-  status: RepositoriesStatus
-  repositories: Repository[]
   query: string
   selectedIds: Set<number>
-  message: string | null
 }
 
 export type RepositoriesAction =
-  | { type: 'load-succeeded'; repositories: RepositoryResponse[] }
-  | { type: 'load-failed'; message: string }
   | { type: 'query-changed'; query: string }
   | { type: 'repository-toggled'; id: number }
   | { type: 'visible-repositories-toggled'; ids: number[] }
   | { type: 'selection-cleared' }
 
 export const initialRepositoriesState: RepositoriesState = {
-  status: 'loading',
-  repositories: [],
   query: '',
   selectedIds: new Set(),
-  message: null,
-}
-
-function toRepository(repository: RepositoryResponse): Repository {
-  return {
-    id: repository.id,
-    name: repository.name,
-    private: repository.private,
-    description: repository.description,
-    language: repository.language,
-    gitUrl: repository.gitUrl,
-    cloneUrl: repository.cloneUrl,
-    updatedAt: new Intl.DateTimeFormat('es-MX', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    }).format(new Date(repository.updatedAt)),
-  }
 }
 
 export function repositoriesReducer(
@@ -49,14 +19,6 @@ export function repositoriesReducer(
   action: RepositoriesAction,
 ): RepositoriesState {
   switch (action.type) {
-    case 'load-succeeded':
-      return {
-        ...state,
-        status: 'ready',
-        repositories: action.repositories.map(toRepository),
-      }
-    case 'load-failed':
-      return { ...state, status: 'error', message: action.message }
     case 'query-changed':
       return { ...state, query: action.query }
     case 'repository-toggled': {
@@ -68,7 +30,7 @@ export function repositoriesReducer(
         selectedIds.add(action.id)
       }
 
-      return { ...state, selectedIds, message: null }
+      return { ...state, selectedIds }
     }
     case 'visible-repositories-toggled': {
       const selectedIds = new Set(state.selectedIds)
@@ -82,9 +44,9 @@ export function repositoriesReducer(
         }
       }
 
-      return { ...state, selectedIds, message: null }
+      return { ...state, selectedIds }
     }
     case 'selection-cleared':
-      return { ...state, selectedIds: new Set(), message: null }
+      return { ...state, selectedIds: new Set() }
   }
 }

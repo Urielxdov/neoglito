@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import { normalizeText } from '@neoglito/shared/text'
 import { CreateProjectForm } from '../../components/repositories/create-project-form'
 import { InitializingOverlay } from '../../components/repositories/initializing-overlay'
 import { ProjectDetailModal } from '../../components/repositories/project-detail-modal'
@@ -11,6 +12,7 @@ import { RepositoryListItem } from '../../components/repositories/repository-lis
 import { projectService } from '../../services/project.service'
 import { repositoryService } from '../../services/repository.service'
 import { useAuth } from '../../state/auth/auth.hook'
+import { useRepositories } from '../../state/projects/useRepositories.hook'
 import {
   initialProjectsState,
   projectsReducer,
@@ -27,6 +29,12 @@ function shortName(name: string): string {
 
 export default function RepositorySelectionPage() {
   const { user } = useAuth()
+  const {
+    allRepositories,
+    isLoading: repositoriesLoading,
+    isError: repositoriesError,
+    error: repositoriesErrorMessage,
+  } = useRepositories()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [repositoriesState, repositoriesDispatch] = useReducer(repositoriesReducer, initialRepositoriesState)
   const [projectsState, projectsDispatch] = useReducer(projectsReducer, initialProjectsState)
@@ -37,29 +45,11 @@ export default function RepositorySelectionPage() {
   } | null>(null)
 
   const dark = theme === 'dark'
-  const normalizedQuery = repositoriesState.query.trim().toLowerCase()
-  const visibleRepositories = repositoriesState.repositories.filter((repository) => (
-    repository.name.toLowerCase().includes(normalizedQuery)
-    || repository.description.toLowerCase().includes(normalizedQuery)
+  const normalizedQuery = normalizeText(repositoriesState.query)
+  const visibleRepositories = allRepositories.filter((repository) => (
+    normalizeText(repository.name).includes(normalizedQuery)
+    || normalizeText(repository.description).includes(normalizedQuery)
   ))
-
-  useEffect(() => {
-    const loadRepositories = async () => {
-      const response = await repositoryService.getAll()
-
-      if (response.success && response.data) {
-        repositoriesDispatch({ type: 'load-succeeded', repositories: response.data })
-        return
-      }
-
-      repositoriesDispatch({
-        type: 'load-failed',
-        message: response.error?.message ?? 'No fue posible cargar los repositorios.',
-      })
-    }
-
-    void loadRepositories()
-  }, [])
 
   const loadProjects = useCallback(async () => {
     const response = await projectService.getAll()
@@ -94,12 +84,12 @@ export default function RepositorySelectionPage() {
   const allVisibleRepositoriesSelected = visibleRepositories.length > 0
     && visibleRepositories.every((repository) => repositoriesState.selectedIds.has(repository.id))
 
-  const selectedRepositories = repositoriesState.repositories.filter((repository) => (
+  const selectedRepositories = allRepositories.filter((repository) => (
     repositoriesState.selectedIds.has(repository.id)
   ))
 
   const nameTaken = projectsState.newName.trim().length > 0 && projectsState.projects.some((project) => (
-    project.name.trim().toLowerCase() === projectsState.newName.trim().toLowerCase()
+    normalizeText(project.name) === normalizeText(projectsState.newName)
   ))
 
   const canCreateProject = projectsState.newName.trim().length > 0
@@ -177,7 +167,7 @@ export default function RepositorySelectionPage() {
 
   const openProjectRepositories: ProjectDetailRepository[] = openProject
     ? openProject.repositories.map((linkedRepository) => {
-      const liveRepository = repositoriesState.repositories.find((repository) => repository.id === linkedRepository.id)
+      const liveRepository = allRepositories.find((repository) => repository.id === linkedRepository.id)
       const others = (projectCountByRepositoryId.get(linkedRepository.id) ?? 1) - 1
 
       return {
@@ -195,7 +185,7 @@ export default function RepositorySelectionPage() {
 
   const activeProjectRepositories: ProjectDetailRepositoryInfo[] = activeProject
     ? activeProject.repositories.map((linkedRepository) => {
-      const liveRepository = repositoriesState.repositories.find((repository) => repository.id === linkedRepository.id)
+      const liveRepository = allRepositories.find((repository) => repository.id === linkedRepository.id)
 
       return {
         id: linkedRepository.id,
@@ -263,7 +253,7 @@ export default function RepositorySelectionPage() {
             <span className="min-w-0 flex-1">
               <span className="block text-[17px] font-semibold">Selecciona repositorios</span>
               <span className="mt-0.5 block text-[13px] text-[#8c98ac] dark:text-[#a7b4c8]">
-                Cuenta @{user?.username} · {repositoriesState.repositories.length} repositorios
+                Cuenta @{user?.username} · {allRepositories.length} repositorios
               </span>
             </span>
           </header>
@@ -288,7 +278,7 @@ export default function RepositorySelectionPage() {
                   type: 'visible-repositories-toggled',
                   ids: visibleRepositories.map((repository) => repository.id),
                 })}
-                disabled={repositoriesState.status !== 'ready' || visibleRepositories.length === 0}
+                disabled={repositoriesLoading || repositoriesError || visibleRepositories.length === 0}
                 className="h-[42px] shrink-0 rounded-lg border border-[#d6dce5] bg-white px-4 text-[12.5px] font-semibold whitespace-nowrap text-[#394b6a] hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#35435a] dark:bg-[#111826] dark:text-[#c1cbe0]"
               >
                 {allVisibleRepositoriesSelected ? 'Deseleccionar todos' : 'Seleccionar todos'}
@@ -296,10 +286,10 @@ export default function RepositorySelectionPage() {
             </div>
 
             <div className="mt-4 overflow-hidden rounded-lg border border-[#e0e6ef] dark:border-[#253044]">
-              {repositoriesState.status === 'loading' ? (
+              {repositoriesLoading ? (
                 <p className="px-4 py-8 text-center text-[13px] text-[#8c98ac]">Cargando repositorios...</p>
-              ) : repositoriesState.status === 'error' ? (
-                <p className="px-4 py-8 text-center text-[13px] text-[#c2410c] dark:text-[#fb923c]">{repositoriesState.message}</p>
+              ) : repositoriesError ? (
+                <p className="px-4 py-8 text-center text-[13px] text-[#c2410c] dark:text-[#fb923c]">{repositoriesErrorMessage}</p>
               ) : visibleRepositories.length > 0 ? (
                 visibleRepositories.map((repository) => (
                   <RepositoryListItem

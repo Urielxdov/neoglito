@@ -9,9 +9,9 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          <Route path="authentication" element={<AuthenticationPage />} />
           <Route element={<ProtectedRoute />}>
             <Route index element={<RepositorySelectionPage />} />
-            <Route path="authentication" element={<AuthenticationPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

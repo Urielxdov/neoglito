@@ -1,23 +1,16 @@
-import { useEffect } from 'react'
-import { Outlet } from 'react-router-dom'
-import { authService } from "@neoglito/web/services/auth.service"
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from "@neoglito/web/state/auth/auth-context"
 
 export function ProtectedRoute() {
   const { status } = useAuth()
-
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      authService.connectWithGitHub()
-    }
-  }, [status])
+  const location = useLocation()
 
   if (status === 'loading') {
-    return <main className="grid min-h-screen place-items-center">Comprobando sesión…</main>
+    return <main className="grid min-h-screen place-items-center">Comprobando sesion...</main>
   }
 
   if (status === 'unauthenticated') {
-    return <main className="grid min-h-screen place-items-center">Redirigiendo a GitHub…</main>
+    return <Navigate to="/authentication" replace state={{ from: location }} />
   }
 
   return <Outlet />

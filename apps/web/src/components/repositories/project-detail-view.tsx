@@ -7,6 +7,11 @@ export interface ProjectDetailRepositoryInfo {
   language: string
 }
 
+export interface ProjectInitializationStatus {
+  type: 'success' | 'error'
+  message: string
+}
+
 interface ProjectDetailViewProps {
   project: Project
   repositories: ProjectDetailRepositoryInfo[]
@@ -14,7 +19,10 @@ interface ProjectDetailViewProps {
   deployEnv: Record<string, DeployEnvVar[]>
   openKey: string | null
   configured: boolean
+  initializing: boolean
+  initializationStatus: ProjectInitializationStatus | null
   onBack(): void
+  onInitialize(): void
   onToggleRow(key: string): void
   onPathChange(key: string, path: string): void
   onEnvAdd(key: string): void
@@ -35,7 +43,10 @@ export function ProjectDetailView({
   deployEnv,
   openKey,
   configured,
+  initializing,
+  initializationStatus,
   onBack,
+  onInitialize,
   onToggleRow,
   onPathChange,
   onEnvAdd,
@@ -85,6 +96,28 @@ export function ProjectDetailView({
               <span className="text-[13px] text-[#51607a] dark:text-[#a7b4c8]">{repository.language}</span>
             </div>
           ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={initializing || repositories.length === 0}
+            onClick={onInitialize}
+            className="h-10 rounded-lg bg-[#2257c4] px-[18px] text-[13px] font-semibold text-white shadow-[0_1px_2px_rgba(34,87,196,0.35)] enabled:hover:bg-[#1c489f] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {initializing ? 'Clonando repositorios…' : 'Clonar repositorios'}
+          </button>
+          {initializationStatus && (
+            <span
+              className={`text-[12.5px] ${
+                initializationStatus.type === 'success'
+                  ? 'text-[#1d7a45] dark:text-[#5fcf8f]'
+                  : 'text-[#c2410c] dark:text-[#fb923c]'
+              }`}
+            >
+              {initializationStatus.message}
+            </span>
+          )}
         </div>
 
         <div className="flex flex-col gap-2.5">

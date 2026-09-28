@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { authService } from '../services/auth.service'
-import { useAuth } from '../state/auth/auth-context'
+import { useAuth } from '../state/auth/auth.hook'
 
 export function ProtectedRoute() {
   const { status } = useAuth()

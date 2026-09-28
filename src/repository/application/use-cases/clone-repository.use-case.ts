@@ -12,7 +12,7 @@ import { ENCRYPTION_PORT } from "../../../shared/application/encryption.port.js"
 import type { EncryptionPort } from "../../../shared/application/encryption.port.js";
 import { GIT_CLONER_PORT } from "../../../shared/application/repository-cloner.port.js";
 import type { RepositoryClonerPort } from "../../../shared/application/repository-cloner.port.js";
-import { CloneRepositoryDto } from "../dto/clone-repository.dto.js";
+import type { CloneRepositoryRequest } from "@neoglito/shared/repository";
 
 @Injectable()
 export class CloneRepositoryUseCase {
@@ -24,7 +24,10 @@ export class CloneRepositoryUseCase {
         private readonly repositoryCloner: RepositoryClonerPort,
     ) {}
 
-    async execute(userId: number, request: CloneRepositoryDto): Promise<string> {
+    async execute(
+        userId: number,
+        request: CloneRepositoryRequest,
+    ): Promise<string> {
         const repositoryName = this.getRepositoryName(request.cloneUrl)
         const connection = await this.prisma.gitHubConnection.findUnique({
             where: { userId },

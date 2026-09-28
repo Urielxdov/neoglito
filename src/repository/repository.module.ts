@@ -17,6 +17,10 @@ import { GitCloneRepositoryService } from "../shared/infrastructure/git/git-repo
 import { AuthModule } from "../auth/auth.module.js";
 import { PassportModule } from "@nestjs/passport";
 import { GetRepositoriesUseCase } from "./application/use-cases/get-repositories.use-case.js";
+import { CloneRepositoriesUseCase } from "./application/use-cases/clone-repositories.use-case.js";
+import { FIND_FILES_PORT } from "../shared/application/find-files.port.js";
+import { FindDockerFilesUseCase } from "../shared/application/find-docker-files.js";
+import { FileSystemFindFilesService } from "../shared/infrastructure/file-system/file-system-find-files.service.js";
 
 @Module({
     imports: [AuthModule, PassportModule.register({ session: false })],
@@ -27,6 +31,8 @@ import { GetRepositoriesUseCase } from "./application/use-cases/get-repositories
         GetProjectsUseCase,
         CreateRepositoryUseCase,
         CloneRepositoryUseCase,
+        CloneRepositoriesUseCase,
+        FindDockerFilesUseCase,
         GetRepositoriesUseCase,
         {
             provide: PROJECT_REPOSITORY,
@@ -43,7 +49,10 @@ import { GetRepositoriesUseCase } from "./application/use-cases/get-repositories
         {
             provide: GIT_CLONER_PORT,
             useClass: GitCloneRepositoryService
-
+        },
+        {
+            provide: FIND_FILES_PORT,
+            useClass: FileSystemFindFilesService,
         }
     ],
 })

@@ -5,11 +5,12 @@ import { ProjectDetailModal } from '../../components/repositories/project-detail
 import type { ProjectDetailRepository } from '../../components/repositories/project-detail-modal'
 import { ProjectDetailView } from '../../components/repositories/project-detail-view'
 import type { ProjectDetailRepositoryInfo } from '../../components/repositories/project-detail-view'
+import type { ProjectInitializationStatus } from '../../components/repositories/project-detail-view'
 import { ProjectListItem } from '../../components/repositories/project-list-item'
 import { RepositoryListItem } from '../../components/repositories/repository-list-item'
 import { projectService } from '../../services/project.service'
 import { repositoryService } from '../../services/repository.service'
-import { useAuth } from '../../state/auth/auth-context'
+import { useAuth } from '../../state/auth/auth.hook'
 import {
   initialProjectsState,
   projectsReducer,
@@ -29,6 +30,11 @@ export default function RepositorySelectionPage() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [repositoriesState, repositoriesDispatch] = useReducer(repositoriesReducer, initialRepositoriesState)
   const [projectsState, projectsDispatch] = useReducer(projectsReducer, initialProjectsState)
+  const [initializingProjectId, setInitializingProjectId] = useState<number | null>(null)
+  const [initializationStatus, setInitializationStatus] = useState<{
+    projectId: number
+    status: ProjectInitializationStatus
+  } | null>(null)
 
   const dark = theme === 'dark'
   const normalizedQuery = repositoriesState.query.trim().toLowerCase()
@@ -199,6 +205,34 @@ export default function RepositorySelectionPage() {
     })
     : []
 
+  const handleInitializeProject = async (projectId: number) => {
+    setInitializingProjectId(projectId)
+    setInitializationStatus(null)
+
+    const response = await projectService.initialize(projectId)
+
+    if (response.success && response.data) {
+      const count = response.data.length
+      setInitializationStatus({
+        projectId,
+        status: {
+          type: 'success',
+          message: count === 1 ? '1 repositorio clonado.' : `${count} repositorios clonados.`,
+        },
+      })
+    } else {
+      setInitializationStatus({
+        projectId,
+        status: {
+          type: 'error',
+          message: response.error?.message ?? 'No fue posible clonar los repositorios.',
+        },
+      })
+    }
+
+    setInitializingProjectId(null)
+  }
+
   return (
     <main
       data-theme={theme}
@@ -321,7 +355,14 @@ export default function RepositorySelectionPage() {
               deployEnv={projectsState.deployEnv}
               openKey={projectsState.openDeployKey}
               configured={projectsState.configuredProjectIds.has(activeProject.id)}
+              initializing={initializingProjectId === activeProject.id}
+              initializationStatus={
+                initializationStatus?.projectId === activeProject.id
+                  ? initializationStatus.status
+                  : null
+              }
               onBack={() => projectsDispatch({ type: 'detail-closed' })}
+              onInitialize={() => void handleInitializeProject(activeProject.id)}
               onToggleRow={(key) => projectsDispatch({ type: 'deploy-row-toggled', key })}
               onPathChange={(key, path) => projectsDispatch({ type: 'deploy-path-changed', key, path })}
               onEnvAdd={(key) => projectsDispatch({ type: 'deploy-env-row-added', key })}

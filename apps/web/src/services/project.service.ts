@@ -9,4 +9,8 @@ export const projectService = {
   create(request: CreateProjectRequest): Promise<ApiResponse<CreateProjectResponse>> {
     return apiClient.post<CreateProjectResponse>('/project/registry', request)
   },
+
+  initialize(projectId: number): Promise<ApiResponse<string[]>> {
+    return apiClient.post<string[]>('/project/init_project', { projectId })
+  },
 }

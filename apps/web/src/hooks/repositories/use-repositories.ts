@@ -1,8 +1,8 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { toRepository } from '../../mappers/repository.mapper.js'
-import type { Repository } from '../../models/repository'
-import { createRepositorySchema } from '../../schemas/create-repository.schema'
-import { repositoryService } from '../../services/repository.service.js'
+import { toRepository } from '@neoglito/web/mappers/repository.mapper'
+import type { Repository } from '@neoglito/web/models/repository'
+import { createRepositorySchema } from '@neoglito/web/schemas/create-repository.schema'
+import { repositoryService } from '@neoglito/web/services/repository.service'
 import type { CreateRepositoryRequest } from '@neoglito/shared'
 
 const emptyRepositories: Repository[] = []

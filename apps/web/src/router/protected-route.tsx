@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { useAuth } from "@neoglito/web/state/auth/auth-context"
+import { useAuth } from "@neoglito/web/hooks/auth/use-auth"
 
 export function ProtectedRoute() {
   const { status } = useAuth()

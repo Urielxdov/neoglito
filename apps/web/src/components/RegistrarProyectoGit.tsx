@@ -5,21 +5,16 @@ import {
   Info,
   LoaderCircle,
   LockKeyhole,
-  Moon,
-  Sun,
 } from 'lucide'
 import { AppIcon } from "@neoglito/web/components/ui/app-icon"
 
-export type ThemeMode = 'light' | 'dark'
 export type GithubAccount = { user: string; repos?: number }
 export type StatusKind = 'ok' | 'err' | 'wait'
 export type Status = { kind: StatusKind; title: string; text: string }
 
 interface GitHubConnectionPanelProps {
-  theme: ThemeMode
   account: GithubAccount | null
   status: Status | null
-  onThemeChange(theme: ThemeMode): void
   onGithub(): void
   onCancel(): void
   onPrimary(): void
@@ -41,35 +36,16 @@ const btnPrimary =
   'border-transparent bg-[#2257c4] dark:bg-[#5b8df5] text-white dark:text-[#0b1220] shadow-[0_1px_2px_rgba(34,87,196,0.35)] hover:bg-[#1c489f] dark:hover:bg-[#7aa4ff] active:translate-y-px'
 
 function GitHubConnectionPanel({
-  theme,
   account,
   status,
-  onThemeChange,
   onGithub,
   onCancel,
   onPrimary,
 }: GitHubConnectionPanelProps) {
-  const dark = theme === 'dark'
-
   return (
     <div
-      data-theme={theme}
-      className="min-h-screen flex flex-col items-center gap-[22px] px-6 pt-14 pb-20 box-border font-sans bg-[#f8fafc] dark:bg-[#0c121d] text-[#16202e] dark:text-[#e8edf6]"
+      className="box-border flex min-h-0 flex-1 flex-col items-center gap-[22px] overflow-y-auto px-6 py-10 font-sans text-[#16202e] dark:text-[#e8edf6] sm:py-14"
     >
-      <div className="w-full max-w-[560px] flex items-center justify-between gap-4">
-        <div className="text-[13px] font-semibold tracking-[0.09em] uppercase text-[#8c98ac] dark:text-[#7a8699]">
-          Repositorios
-        </div>
-        <button
-          type="button"
-          onClick={() => onThemeChange(dark ? 'light' : 'dark')}
-          className={`${btnBase} ${btnGhost} h-[34px] px-[13px] text-[12.5px] gap-[7px]`}
-        >
-          <AppIcon icon={dark ? Sun : Moon} size={15} />
-          <span>{dark ? 'Modo claro' : 'Modo oscuro'}</span>
-        </button>
-      </div>
-
       <div className="relative flex flex-col w-full max-w-[560px] rounded-2xl bg-white dark:bg-[#111826] shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7),0_8px_22px_-12px_rgba(0,0,0,0.5)]">
         <div className="flex items-center gap-[14px] px-6 py-5 border-b border-[#e6eaf0] dark:border-[#253044] shrink-0">
           <div className="w-[42px] h-[42px] rounded-[11px] grid place-items-center shrink-0 bg-[#eef3fc] dark:bg-[#18243a] text-[#2257c4] dark:text-[#5b8df5]">

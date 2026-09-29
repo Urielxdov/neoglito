@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { authService } from '../../services/auth.service'
 
-export function useAuth() {
+export function useAuthQuery() {
   const query = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: async () => {

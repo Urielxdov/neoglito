@@ -1,8 +1,8 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { toProject } from '../../mappers/project.mapper'
-import type { Project } from '../../models/project'
-import { createProjectSchema } from '../../schemas/create-project.schema'
-import { projectService } from '../../services/project.service.js'
+import { toProject } from '@neoglito/web/mappers/project.mapper'
+import type { Project } from '@neoglito/web/models/project'
+import { createProjectSchema } from '@neoglito/web/schemas/create-project.schema'
+import { projectService } from '@neoglito/web/services/project.service'
 import type { CreateProjectRequest } from '@neoglito/shared'
 
 const emptyProjects: Project[] = []

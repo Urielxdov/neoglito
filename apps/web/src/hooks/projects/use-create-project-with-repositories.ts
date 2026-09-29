@@ -3,8 +3,8 @@ import {
   createProjectWithRepositories,
 } from '../../use-cases/project/createProjectWithRepositories.use-case'
 import type { CreateProjectWithRepositoriesInput } from '../../use-cases/project/createProjectWithRepositories.use-case'
-import { useRepositories } from '../repositories/useRepositories.hook'
-import { useProjects } from './useProjects.hook'
+import { useRepositories } from '@neoglito/web/hooks/repositories/use-repositories'
+import { useProjects } from '@neoglito/web/hooks/projects/use-projects'
 
 export function useCreateProjectWithRepositories() {
   const { createProject } = useProjects()

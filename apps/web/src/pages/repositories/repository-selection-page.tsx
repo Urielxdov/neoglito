@@ -1,22 +1,21 @@
 import { useCallback, useMemo, useReducer, useState } from 'react';
-import { Moon, Sun } from 'lucide';
 import { ProjectAnalyzeView } from "@neoglito/web/components/repositories/project-analyze-view";
 import { ProjectDetailModal } from "@neoglito/web/components/repositories/project-detail-modal";
 import { ProjectsPanel } from "@neoglito/web/components/repositories/projects-panel";
 import { RepositorySelectionPanel } from "@neoglito/web/components/repositories/repository-selection-panel";
 import { AppIcon } from "@neoglito/web/components/ui/app-icon";
 import { projectService } from "@neoglito/web/services/project.service";
-import { useAuth } from "@neoglito/web/state/auth/auth-context";
+import { useAuth } from "@neoglito/web/hooks/auth/use-auth";
 import {
   initialProjectsState,
   projectsReducer,
 } from "@neoglito/web/state/projects/projects.reducer";
-import { useProjects } from "@neoglito/web/state/projects/useProjects.hook";
+import { useProjects } from "@neoglito/web/hooks/projects/use-projects";
 import {
   initialRepositoriesState,
   repositoriesReducer,
 } from "@neoglito/web/state/repositories/repositories.reducer";
-import { useRepositories } from "@neoglito/web/state/repositories/useRepositories.hook";
+import { useRepositories } from "@neoglito/web/hooks/repositories/use-repositories";
 import {
   getProjectCountByRepositoryId,
   getProjectDeployRepositories,
@@ -27,8 +26,8 @@ import {
   getVisibleRepositories,
   isProjectNameTaken,
 } from "@neoglito/web/pages/repositories/repository-selection.helpers";
-import { useProjectAnalysis } from "@neoglito/web/pages/repositories/use-project-analysis";
-import { useProjectCreation } from "@neoglito/web/pages/repositories/use-project-creation";
+import { useProjectAnalysis } from "@neoglito/web/hooks/projects/use-project-analysis";
+import { useProjectCreation } from "@neoglito/web/hooks/projects/use-project-creation";
 
 export default function RepositorySelectionPage() {
   const { user } = useAuth();
@@ -45,7 +44,6 @@ export default function RepositorySelectionPage() {
     error: projectsErrorMessage,
     refresh: loadProjects,
   } = useProjects();
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [deployError, setDeployError] = useState<string | null>(null);
   const [repositoriesState, repositoriesDispatch] = useReducer(
     repositoriesReducer,
@@ -55,8 +53,6 @@ export default function RepositorySelectionPage() {
     projectsReducer,
     initialProjectsState,
   );
-
-  const dark = theme === 'dark';
 
   const visibleRepositories = useMemo(
     () =>
@@ -257,23 +253,8 @@ export default function RepositorySelectionPage() {
 
   return (
     <main
-      data-theme={theme}
-      className="flex h-screen flex-col overflow-hidden bg-[#f8fafc] px-6 pt-6 pb-6 font-sans text-[#16202e] dark:bg-[#0c121d] dark:text-[#e8edf6]"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pt-6 pb-6 font-sans text-[#16202e] dark:text-[#e8edf6]"
     >
-      <div className="flex w-full shrink-0 items-center justify-between gap-4">
-        <span className="text-[13px] font-semibold uppercase tracking-[0.09em] text-[#8c98ac] dark:text-[#7a8699]">
-          Repositorios y proyectos
-        </span>
-        <button
-          type="button"
-          onClick={() => setTheme(dark ? 'light' : 'dark')}
-          className="inline-flex h-[34px] items-center gap-2 rounded-lg border border-[#d6dce5] bg-white px-[13px] text-[12.5px] font-semibold text-[#51607a] transition-colors hover:bg-[#f1f5f9] dark:border-[#2e3a51] dark:bg-[#111826] dark:text-[#a7b4c8] dark:hover:bg-[#1a2334]"
-        >
-          <AppIcon icon={dark ? Sun : Moon} size={15} />
-          <span>{dark ? 'Modo claro' : 'Modo oscuro'}</span>
-        </button>
-      </div>
-
       {projectsState.phase === 'analyze' && activeProject && projectsState.analyze ? (
         <ProjectAnalyzeView
           project={activeProject}

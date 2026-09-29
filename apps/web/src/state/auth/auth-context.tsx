@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useReducer } from 'react'
+import { createContext, useEffect, useReducer } from 'react'
 import type { PropsWithChildren } from 'react'
 import { authService } from "@neoglito/web/services/auth.service"
 import {
@@ -11,7 +11,7 @@ interface AuthContextValue extends AuthState {
   refresh(): Promise<void>
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null)
+export const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [state, dispatch] = useReducer(authReducer, initialAuthState)
@@ -32,14 +32,4 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [])
 
   return <AuthContext value={{ ...state, refresh }}>{children}</AuthContext>
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-
-  if (!context) {
-    throw new Error('useAuth debe usarse dentro de AuthProvider')
-  }
-
-  return context
 }

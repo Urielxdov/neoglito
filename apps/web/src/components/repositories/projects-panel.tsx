@@ -1,18 +1,18 @@
 import type { Dispatch } from 'react';
 import { Folder } from 'lucide';
-import type { Project } from "@neoglito/web/models/project";
-import type { Repository } from "@neoglito/web/models/repository";
+import type { Project } from '@neoglito/web/models/project';
+import type { Repository } from '@neoglito/web/models/repository';
 import type {
   ProjectsAction,
   ProjectsState,
-} from "@neoglito/web/state/projects/projects.reducer";
-import { shortName } from "@neoglito/web/utils/repository-name";
-import { AppIcon } from "@neoglito/web/components/ui/app-icon";
-import { CreateProjectForm } from "@neoglito/web/components/repositories/create-project-form";
-import { InitializingOverlay } from "@neoglito/web/components/repositories/initializing-overlay";
-import { ProjectDetailView } from "@neoglito/web/components/repositories/project-detail-view";
-import type { ProjectDetailRepositoryInfo } from "@neoglito/web/components/repositories/project-detail-view";
-import { ProjectListItem } from "@neoglito/web/components/repositories/project-list-item";
+} from '@neoglito/web/state/projects/projects.reducer';
+import { shortName } from '@neoglito/web/utils/repository-name';
+import { AppIcon } from '@neoglito/web/components/ui/app-icon';
+import { CreateProjectForm } from '@neoglito/web/components/repositories/create-project-form';
+import { InitializingOverlay } from '@neoglito/web/components/repositories/initializing-overlay';
+import { ProjectDetailView } from '@neoglito/web/components/repositories/project-detail-view';
+import type { ProjectDetailRepositoryInfo } from '@neoglito/web/components/repositories/project-detail-view';
+import { ProjectListItem } from '@neoglito/web/components/repositories/project-list-item';
 
 interface ProjectsPanelProps {
   activeProject: Project | null;
@@ -65,6 +65,7 @@ export function ProjectsPanel({
             deployPaths={projectsState.deployPaths}
             deployPathCandidates={projectsState.deployPathCandidates}
             deployEnv={projectsState.deployEnv}
+            deployPorts={projectsState.deployPorts}
             openKey={projectsState.openDeployKey}
             detailTab={projectsState.detailTab}
             onTabChange={(tab) =>
@@ -90,6 +91,15 @@ export function ProjectsPanel({
                 index,
                 field,
                 value,
+              })
+            }
+            onPortChange={(key, index, dockerComposePath, publishedPort) =>
+              projectsDispatch({
+                type: 'deploy-port-changed',
+                key,
+                index,
+                dockerComposePath,
+                publishedPort,
               })
             }
             onAnalyze={onAnalyze}
@@ -123,8 +133,8 @@ export function ProjectsPanel({
               <span className="block text-[17px] font-semibold">Proyectos</span>
               <span className="mt-0.5 block text-[13px] text-[#8c98ac] dark:text-[#a7b4c8]">
                 {projects.length}{' '}
-                {projects.length === 1 ? 'proyecto' : 'proyectos'}{' '}
-                · un repositorio puede estar en varios
+                {projects.length === 1 ? 'proyecto' : 'proyectos'} · un
+                repositorio puede estar en varios
               </span>
             </span>
           </header>

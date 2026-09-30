@@ -46,7 +46,7 @@ export function RepositorySelectionPanel({
             Selecciona repositorios
           </span>
           <span className="mt-0.5 block text-[13px] text-[#8c98ac] dark:text-[#a7b4c8]">
-            Cuenta @{userName} · {repositoriesState.repositories.length}{' '}
+            Cuenta @{userName} · {repositories.length}{' '}
             repositorios
           </span>
         </span>

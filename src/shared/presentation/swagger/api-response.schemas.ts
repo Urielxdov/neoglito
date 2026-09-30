@@ -110,6 +110,31 @@ export class ComposeAnalysisSchema {
   environmentVariables!: EnvironmentVariableSchema[];
 }
 
+export class ComposePortSchema {
+  @ApiProperty({ example: 'frontend' })
+  service!: string;
+
+  @ApiProperty({ type: String, nullable: true, example: '127.0.0.1' })
+  hostIp!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, example: '5173' })
+  publishedPort!: string | null;
+
+  @ApiProperty({ example: '5173' })
+  targetPort!: string;
+
+  @ApiProperty({ example: 'tcp' })
+  protocol!: string;
+
+  @ApiProperty({ enum: ['one-to-one', 'range'], example: 'one-to-one' })
+  mappingType!: 'one-to-one' | 'range';
+}
+
+export class ProjectComposeAnalysisSchema extends ComposeAnalysisSchema {
+  @ApiProperty({ type: () => [ComposePortSchema] })
+  ports!: ComposePortSchema[];
+}
+
 export class InitProjectDataSchema {
   @ApiProperty({ type: [String], example: ['C:/repos/neoglito/backend'] })
   clonedRepositoryPaths!: string[];
@@ -134,8 +159,8 @@ export class ProjectDockerFilesDataSchema {
   })
   dockerFilesPath!: string[];
 
-  @ApiProperty({ type: () => [ComposeAnalysisSchema] })
-  composeAnalyses!: ComposeAnalysisSchema[];
+  @ApiProperty({ type: () => [ProjectComposeAnalysisSchema] })
+  composeAnalyses!: ProjectComposeAnalysisSchema[];
 }
 
 export class CreateRepositoryDataSchema {
@@ -238,7 +263,10 @@ export class DeploymentServiceSchema {
   @ApiProperty({ example: 'api' })
   composeServiceName!: string;
 
-  @ApiProperty({ example: 8080, description: 'Puerto publicado por el contenedor en el host' })
+  @ApiProperty({
+    example: 8080,
+    description: 'Puerto publicado por el contenedor en el host',
+  })
   port!: number;
 
   @ApiProperty({

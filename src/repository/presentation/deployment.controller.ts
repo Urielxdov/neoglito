@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/infrastructure/passport/jwt-auth.guard.js';
 import { ExtractEnvironmentVariablesUseCase } from '../../shared/application/extract-environment-variables.use-case.js';
+import { YamlComposePortExtractService } from '../../shared/infrastructure/compose/yaml-compose-port-extract.service.js';
 import type { AuthenticatedRequest } from '../../shared/presentation/http/authenticated-request.js';
 import {
   ApiSuccessResponseDoc,
@@ -29,6 +30,8 @@ import {
   DeploymentServiceSchema,
   EnvironmentVariableSchema,
   ProjectDockerFilesDataSchema,
+  ProjectComposeAnalysisSchema,
+  ComposePortSchema,
 } from '../../shared/presentation/swagger/api-response.schemas.js';
 import type { ProjectDockerFilesResponse } from '@neoglito/shared/repository';
 import { DeployComposeDto } from '../application/dto/deploy-compose.dto.js';
@@ -49,6 +52,7 @@ export class DeploymentController {
   constructor(
     private readonly getComposeFiles: GetProjectComposeFilesUseCase,
     private readonly extractEnvironmentVariables: ExtractEnvironmentVariablesUseCase,
+    private readonly extractComposePorts: YamlComposePortExtractService,
     private readonly deployCompose: DeployComposeUseCase,
     private readonly getDeployments: GetProjectDeploymentsUseCase,
     private readonly stopDeployment: StopDeploymentUseCase,
@@ -69,6 +73,8 @@ export class DeploymentController {
       ProjectDockerFilesDataSchema,
       ComposeAnalysisSchema,
       EnvironmentVariableSchema,
+      ProjectComposeAnalysisSchema,
+      ComposePortSchema,
     ],
   })
   async dockerFilesPaths(
@@ -79,12 +85,21 @@ export class DeploymentController {
       request.user.id,
       dto.projectId,
     );
-    const composeAnalyses = (
-      await this.extractEnvironmentVariables.execute(result.dockerFilesPath)
-    ).map((analysis) => ({
-      dockerComposePath: analysis.filePath,
-      environmentVariables: analysis.environmentVariables,
-    }));
+    const composeAnalyses = await Promise.all(
+      result.dockerFilesPath.map(async (dockerComposePath) => {
+        const [environmentAnalysis, portAnalysis] = await Promise.all([
+          this.extractEnvironmentVariables.execute([dockerComposePath]),
+          this.extractComposePorts.analyze(dockerComposePath),
+        ]);
+
+        return {
+          dockerComposePath,
+          environmentVariables:
+            environmentAnalysis[0]?.environmentVariables ?? [],
+          ports: portAnalysis.ports,
+        };
+      }),
+    );
     return { ...result, composeAnalyses };
   }
 

@@ -1,6 +1,7 @@
 import type {
+  ComposePort,
   DeploymentResponse,
-} from "@neoglito/web/api/contracts";
+} from '@neoglito/web/api/contracts';
 
 export type ProjectsPhase = 'list' | 'detail' | 'analyze';
 export type ProjectsDetailTab = 'deploy' | 'routes' | 'repos' | 'general';
@@ -9,6 +10,10 @@ export interface DeployEnvVar {
   key: string;
   value: string;
   required: boolean;
+}
+
+export interface DeployComposePort extends ComposePort {
+  dockerComposePath: string;
 }
 
 export interface CreationProgress {
@@ -49,6 +54,7 @@ export interface ProjectsState {
   deployPaths: Record<string, string>;
   deployPathCandidates: Record<string, string[]>;
   deployEnv: Record<string, DeployEnvVar[]>;
+  deployPorts: Record<string, DeployComposePort[]>;
   detailTab: ProjectsDetailTab;
   editName: string | null;
   editDescription: string | null;
@@ -89,6 +95,18 @@ export type ProjectsAction =
       envByRepositoryId: Record<number, DeployEnvVar[]>;
     }
   | {
+      type: 'deploy-ports-discovered';
+      projectId: number;
+      portsByRepositoryId: Record<number, DeployComposePort[]>;
+    }
+  | {
+      type: 'deploy-port-changed';
+      key: string;
+      dockerComposePath: string;
+      index: number;
+      publishedPort: string;
+    }
+  | {
       type: 'deploy-paths-discovered';
       projectId: number;
       pathsByRepositoryId: Record<number, string>;
@@ -125,6 +143,7 @@ export const initialProjectsState: ProjectsState = {
   deployPaths: {},
   deployPathCandidates: {},
   deployEnv: {},
+  deployPorts: {},
   detailTab: 'deploy',
   editName: null,
   editDescription: null,
@@ -294,6 +313,33 @@ export function projectsReducer(
 
       return { ...state, deployEnv };
     }
+    case 'deploy-ports-discovered': {
+      const deployPorts = { ...state.deployPorts };
+
+      for (const [repositoryId, ports] of Object.entries(
+        action.portsByRepositoryId,
+      )) {
+        deployPorts[`${action.projectId}:${repositoryId}`] = ports;
+      }
+
+      return { ...state, deployPorts };
+    }
+    case 'deploy-port-changed': {
+      const ports = state.deployPorts[action.key] ?? [];
+
+      return {
+        ...state,
+        deployPorts: {
+          ...state.deployPorts,
+          [action.key]: ports.map((port, index) =>
+            port.dockerComposePath === action.dockerComposePath &&
+            index === action.index
+              ? { ...port, publishedPort: action.publishedPort || null }
+              : port,
+          ),
+        },
+      };
+    }
     case 'edit-name-changed':
       return { ...state, editName: action.name, editSaved: false };
     case 'edit-description-changed':
@@ -396,9 +442,8 @@ export function projectsReducer(
           ...state.analyze,
           collapsed: {
             ...state.analyze.collapsed,
-            [action.repositoryId]: !state.analyze.collapsed[
-              action.repositoryId
-            ],
+            [action.repositoryId]:
+              !state.analyze.collapsed[action.repositoryId],
           },
         },
       };

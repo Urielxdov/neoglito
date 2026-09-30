@@ -22,6 +22,7 @@ import { RecursiveFileFinderService } from '../shared/infrastructure/files/recur
 import { ENVIROMENT_VARIABLE_EXTRACT_PORT } from '../shared/application/enviroment-variable-extract.port.js';
 import { ExtractEnvironmentVariablesUseCase } from '../shared/application/extract-environment-variables.use-case.js';
 import { YamlComposeEnviromentVariableExtractService } from '../shared/infrastructure/compose/yaml-compose-enviroment-variable-extract.service.js';
+import { YamlComposePortExtractService } from '../shared/infrastructure/compose/yaml-compose-port-extract.service.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { PassportModule } from '@nestjs/passport';
 import { GetRepositoriesUseCase } from './application/use-cases/get-repositories.use-case.js';
@@ -60,6 +61,7 @@ import { CacheModule } from '../shared/infrastructure/cache/cache.module.js';
     GetRepositoriesUseCase,
     RecursiveFileFinderService,
     YamlComposeEnviromentVariableExtractService,
+    YamlComposePortExtractService,
     DockerComposeRuntime,
     {
       provide: PROJECT_REPOSITORY,

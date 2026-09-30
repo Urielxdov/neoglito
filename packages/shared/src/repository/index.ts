@@ -12,7 +12,11 @@ export type {
   DeploymentServiceResponse,
 } from '@neoglito/shared/repository/responses/deployment.response';
 export type { InitProjectResponse } from '@neoglito/shared/repository/responses/init-project.response';
-export type { ProjectDockerFilesResponse } from '@neoglito/shared/repository/responses/project-docker-files.response';
+export type {
+  ComposePort,
+  ProjectComposeAnalysis,
+  ProjectDockerFilesResponse,
+} from '@neoglito/shared/repository/responses/project-docker-files.response';
 export type {
   ProjectRepositoryResponse,
   ProjectResponse,

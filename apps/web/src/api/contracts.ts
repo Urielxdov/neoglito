@@ -5,6 +5,7 @@ export type { AuthenticatedUserResponse } from '@neoglito/shared/auth';
 export type {
   CloneRepositoryRequest,
   CloneRepositoryResponse,
+  ComposePort,
   CreateProjectRequest,
   CreateProjectResponse,
   CreateRepositoryRequest,
@@ -15,6 +16,7 @@ export type {
   InitProjectRequest,
   InitProjectResponse,
   ProjectDockerFilesResponse,
+  ProjectComposeAnalysis,
   ProjectRepositoryResponse,
   ProjectResponse,
   RepositoryResponse,

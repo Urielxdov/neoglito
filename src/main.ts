@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { loadEnvFile } from 'node:process';
 import { NestFactory } from '@nestjs/core';
-import { assertDockerIsRunning } from './shared/infrastructure/docker/assert-docker-is-running.js';
+import { assertDockerIsRunning } from './container/infrastructure/docker/assert-docker-is-running.js';
 import { ApiExceptionFilter } from './shared/presentation/filters/api-exception.filter.js';
 import { ApiResponseInterceptor } from './shared/presentation/interceptors/api-response.interceptor.js';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';

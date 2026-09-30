@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { RepositoryRepository } from "../../domain/entities/repository.repository.js";
+import type { RepositoryRepository } from "../../domain/entities/repository/repository.repository.js";
 import { PrismaService } from "../../../prisma/prisma.service.js";
-import { Repository } from "../../domain/entities/repository.entity.js";
+import { Repository } from "../../domain/entities/repository/repository.entity.js";
 
 @Injectable()
 export class PrismaRepositoryRepository implements RepositoryRepository {

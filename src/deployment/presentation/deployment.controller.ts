@@ -22,17 +22,21 @@ import {
 import { JwtAuthGuard } from '../../auth/infrastructure/passport/jwt-auth.guard.js';
 import { ExtractEnvironmentVariablesUseCase } from '../../shared/application/extract-environment-variables.use-case.js';
 import type { AuthenticatedRequest } from '../../shared/presentation/http/authenticated-request.js';
+import type { InitProjectResponse, ProjectDockerFilesResponse } from '@neoglito/shared/repository';
 import {
   ApiSuccessResponseDoc,
   ComposeAnalysisSchema,
   DeploymentSchema,
   DeploymentServiceSchema,
   EnvironmentVariableSchema,
+  InitProjectDataSchema,
   ProjectDockerFilesDataSchema,
 } from '../../shared/presentation/swagger/api-response.schemas.js';
-import type { ProjectDockerFilesResponse } from '@neoglito/shared/repository';
 import { DeployComposeDto } from '../application/dto/deploy-compose.dto.js';
+import { InitProjectDto } from '../application/dto/init-project.dto.js';
 import { ProjectComposeFilesDto } from '../application/dto/project-compose-files.dto.js';
+import { CloneProjectRepositoriesUseCase } from '../application/use-cases/clone-project-repositories.use-case.js';
+import { InitDeployProjectUseCase } from '../application/use-cases/init-deploy-project.use-case.js';
 import {
   DeployComposeUseCase,
   GetProjectDeploymentsUseCase,
@@ -153,5 +157,52 @@ export class DeploymentController {
   })
   async stop(@Param('deploymentId') deploymentId: string) {
     return this.stopDeployment.execute(deploymentId);
+  }
+}
+
+@ApiTags('Project')
+@Controller('project')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@ApiUnauthorizedResponse({ description: 'No autorizado' })
+export class ProjectDeploymentController {
+  constructor(
+    private readonly cloneProjectRepositories: CloneProjectRepositoriesUseCase,
+    private readonly findComposeFiles: InitDeployProjectUseCase,
+    private readonly extractEnvironmentVariables: ExtractEnvironmentVariablesUseCase,
+  ) {}
+
+  @Post('init')
+  @ApiOperation({ description: 'Inicializa el analisis de un proyecto' })
+  @ApiBody({ type: InitProjectDto })
+  @ApiSuccessResponseDoc({
+    status: 200,
+    description: 'Analisis inicializado correctamente',
+    dataSchema: { $ref: getSchemaPath(InitProjectDataSchema) },
+    extraModels: [InitProjectDataSchema, ComposeAnalysisSchema, EnvironmentVariableSchema],
+  })
+  async initProject(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: InitProjectDto,
+  ): Promise<InitProjectResponse> {
+    const clonedRepositoryPaths = await this.cloneProjectRepositories.execute(
+      request.user.id,
+      dto.projectId,
+    );
+    const dockerComposePaths = (
+      await Promise.all(
+        clonedRepositoryPaths.map((repositoryPath) =>
+          this.findComposeFiles.execute(repositoryPath),
+        ),
+      )
+    ).flat();
+    const composeAnalyses = (
+      await this.extractEnvironmentVariables.execute(dockerComposePaths)
+    ).map((analysis) => ({
+      dockerComposePath: analysis.filePath,
+      environmentVariables: analysis.environmentVariables,
+    }));
+
+    return { clonedRepositoryPaths, dockerComposePaths, composeAnalyses };
   }
 }

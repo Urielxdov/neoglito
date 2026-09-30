@@ -10,6 +10,23 @@ export class RedisCache implements CachePort {
     return this.redis.client.get(key);
   }
 
+  async getAll(): Promise<Record<string, string>> {
+    const entries: Array<[string, string]> = [];
+
+    for await (const keys of this.redis.client.scanIterator({ COUNT: 100 })) {
+      const values = await this.redis.client.mGet(keys);
+
+      keys.forEach((key, index) => {
+        const value = values[index];
+        if (value !== null && value !== undefined) {
+          entries.push([key, value]);
+        }
+      });
+    }
+
+    return Object.fromEntries(entries);
+  }
+
   async set(key: string, value: string, ttl?: number): Promise<void> {
     if (ttl === undefined) {
       await this.redis.client.set(key, value);

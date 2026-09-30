@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service.js';
-import { CloneRepositoryUseCase } from './clone-repository.use-case.js';
+import { CloneRepositoryUseCase } from '../../../repository/application/use-cases/repository/clone-repository.use-case.js';
 
 @Injectable()
-export class CloneRepositoriesUseCase {
+export class CloneProjectRepositoriesUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cloneRepository: CloneRepositoryUseCase,

@@ -4,7 +4,7 @@ import { ExchangeGithubCodeUseCase } from "./application/exchange_github_code.js
 import { GetGitHubUserUseCase } from "./application/get_github_user.js";
 import { AuthenticateWithGitHubUseCase } from "./application/authenticate_with_github.js";
 import { AuthUseCase } from "./application/auth.use-case.js";
-import { PrismaService } from "../prisma/prisma.service.js";
+import { PrismaModule } from "../prisma/prisma.module.js";
 import { ENCRYPTION_PORT } from "../shared/application/encryption.port.js";
 import { Aes256GcmEncryptionService } from "../shared/infrastructure/security/aes-256-gcm-encryption.service.js";
 import { JwtModule } from "@nestjs/jwt";
@@ -15,6 +15,7 @@ import { JwtAuthGuard } from "./infrastructure/passport/jwt-auth.guard.js";
 
 @Module({
     imports: [
+        PrismaModule,
         PassportModule.register({ session: false }),
         JwtModule.register({
             secret: process.env.JWT_SECRET,
@@ -25,7 +26,6 @@ import { JwtAuthGuard } from "./infrastructure/passport/jwt-auth.guard.js";
     ],
     controllers: [AuthController],
     providers: [
-        PrismaService,
         ExchangeGithubCodeUseCase,
         GetGitHubUserUseCase,
         AuthenticateWithGitHubUseCase,

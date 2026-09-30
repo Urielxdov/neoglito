@@ -5,8 +5,8 @@ import {
   OnApplicationBootstrap,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { PORT_RESERVATION_PORT } from '../shared/application/port-reservation.port.js';
-import type { PortReservationPort } from '../shared/application/port-reservation.port.js';
+import { PORT_RESERVATION_PORT } from '../ports/application/port-reservation.port.js';
+import type { PortReservationPort } from '../ports/application/port-reservation.port.js';
 
 @Injectable()
 export class RestoreDeploymentPortReservationsService implements OnApplicationBootstrap {

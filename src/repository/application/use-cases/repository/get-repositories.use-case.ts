@@ -1,9 +1,9 @@
 import { BadGatewayException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { PrismaService } from "../../../prisma/prisma.service.js";
-import { ENCRYPTION_PORT } from "../../../shared/application/encryption.port.js";
-import type { EncryptionPort } from "../../../shared/application/encryption.port.js";
+import { PrismaService } from "../../../../prisma/prisma.service.js";
+import { ENCRYPTION_PORT } from "../../../../shared/application/encryption.port.js";
+import type { EncryptionPort } from "../../../../shared/application/encryption.port.js";
 import type { RepositoryResponse } from "@neoglito/shared/repository";
-import type { GitHubRepositoryResponse } from "../../infrastructure/github/github-repository.response.js";
+import type { GitHubRepositoryResponse } from "../../../infrastructure/github/github-repository.response.js";
 
 
 @Injectable()

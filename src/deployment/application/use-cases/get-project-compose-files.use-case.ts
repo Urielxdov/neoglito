@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { CloneRepositoriesUseCase } from './clone-repositories.use-case.js';
+import { CloneProjectRepositoriesUseCase } from './clone-project-repositories.use-case.js';
 import { InitDeployProjectUseCase } from './init-deploy-project.use-case.js';
 
 @Injectable()
 export class GetProjectComposeFilesUseCase {
   constructor(
-    private readonly cloneRepositories: CloneRepositoriesUseCase,
+    private readonly cloneRepositories: CloneProjectRepositoriesUseCase,
     private readonly findComposeFiles: InitDeployProjectUseCase,
   ) {}
 

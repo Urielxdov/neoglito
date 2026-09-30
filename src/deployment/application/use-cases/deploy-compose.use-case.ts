@@ -9,15 +9,65 @@ import { readFile } from 'node:fs/promises';
 import { dirname, resolve, sep } from 'node:path';
 import { parse } from 'yaml';
 import { PrismaService } from '../../../prisma/prisma.service.js';
-import { CONTAINER_RUNTIME_PORT } from '../../../shared/application/container-runtime.port.js';
-import type { ContainerRuntimePort } from '../../../shared/application/container-runtime.port.js';
-import { PORT_RESERVATION_PORT } from '../../../shared/application/port-reservation.port.js';
+import { Container } from '../../../container/domain/entities/container.entity.js';
+import type {
+  ContainerHealth,
+  ContainerStatus,
+} from '../../../container/domain/entities/container.entity.js';
+import { Deployment } from '../../domain/entities/deployment.entity.js';
+import type { DeploymentStatus } from '../../domain/entities/deployment.entity.js';
+import { CONTAINER_RUNTIME_PORT } from '../../../container/application/container-runtime.port.js';
+import type { ContainerRuntimePort } from '../../../container/application/container-runtime.port.js';
+import { PORT_RESERVATION_PORT } from '../../../ports/application/port-reservation.port.js';
 import type {
   HeldPortReservation,
   PortReservationPort,
-} from '../../../shared/application/port-reservation.port.js';
-import { CloneRepositoriesUseCase } from './clone-repositories.use-case.js';
+} from '../../../ports/application/port-reservation.port.js';
+import { CloneProjectRepositoriesUseCase } from './clone-project-repositories.use-case.js';
 import { InitDeployProjectUseCase } from './init-deploy-project.use-case.js';
+
+interface DeploymentRecord {
+  id: string;
+  projectId: number;
+  composePath: string;
+  status: DeploymentStatus;
+  createdAt: Date;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  services: Array<{
+    id: string;
+    composeServiceName: string;
+    port: number;
+    status: ContainerStatus;
+    health: ContainerHealth;
+    lastObservedAt: Date;
+    deploymentId: string;
+  }>;
+}
+
+function toDeployment(record: DeploymentRecord): Deployment {
+  return new Deployment(
+    record.id,
+    record.projectId,
+    record.composePath,
+    record.status,
+    record.createdAt,
+    record.startedAt,
+    record.finishedAt,
+    record.services.map(
+      (service) =>
+        new Container(
+          service.id,
+          service.composeServiceName,
+          service.port,
+          service.status,
+          service.health,
+          service.lastObservedAt,
+          service.deploymentId,
+        ),
+    ),
+  );
+}
 
 @Injectable()
 export class DeployComposeUseCase {
@@ -25,7 +75,7 @@ export class DeployComposeUseCase {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly cloneRepositories: CloneRepositoriesUseCase,
+    private readonly cloneRepositories: CloneProjectRepositoriesUseCase,
     private readonly findComposeFiles: InitDeployProjectUseCase,
     @Inject(CONTAINER_RUNTIME_PORT)
     private readonly runtime: ContainerRuntimePort,
@@ -117,11 +167,12 @@ export class DeployComposeUseCase {
         })),
       });
 
-      return this.prisma.deployment.update({
+      const runningDeployment = await this.prisma.deployment.update({
         where: { id: deployment.id },
         data: { status: 'running' },
         include: { services: true },
       });
+      return toDeployment(runningDeployment);
     } catch (error) {
       await Promise.all(
         portHolds.map((heldPort) =>
@@ -238,11 +289,12 @@ export class GetProjectDeploymentsUseCase {
       throw new NotFoundException(`Project ${projectId} does not exist`);
     }
 
-    return this.prisma.deployment.findMany({
+    const deployments = await this.prisma.deployment.findMany({
       where: { projectId },
       include: { services: true },
       orderBy: { createdAt: 'desc' },
     });
+    return deployments.map(toDeployment);
   }
 }
 
@@ -283,11 +335,12 @@ export class StopDeploymentUseCase {
         data: { status: 'exited', health: 'none', lastObservedAt: new Date() },
       });
 
-      return await this.prisma.deployment.update({
+      const stoppedDeployment = await this.prisma.deployment.update({
         where: { id: deploymentId },
         data: { status: 'stopped', finishedAt: new Date() },
         include: { services: true },
       });
+      return toDeployment(stoppedDeployment);
     } catch (error) {
       await this.prisma.deployment.update({
         where: { id: deploymentId },

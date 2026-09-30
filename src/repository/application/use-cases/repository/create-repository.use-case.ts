@@ -4,13 +4,13 @@ import {
     Inject,
     Injectable,
 } from "@nestjs/common";
-import { PROJECT_REPOSITORY } from "../../domain/entities/project.repository.js";
-import { REPOSITORY_REPOSITORY } from "../../domain/entities/repository.repository.js";
-import type { ProjectRepository } from "../../domain/entities/project.repository.js";
-import type { RepositoryRepository } from "../../domain/entities/repository.repository.js";
-import { Repository } from "../../domain/entities/repository.entity.js";
-import { CreateRepositoryRequest } from "../requests/create-repository.request.js";
-import { CreateRepositoryResponse } from "../responses/create-repository.response.js";
+import { PROJECT_REPOSITORY } from "../../../../project/domain/entities/project.repository.js";
+import { REPOSITORY_REPOSITORY } from "../../../domain/entities/repository/repository.repository.js";
+import type { ProjectRepository } from "../../../../project/domain/entities/project.repository.js";
+import type { RepositoryRepository } from "../../../domain/entities/repository/repository.repository.js";
+import { Repository } from "../../../domain/entities/repository/repository.entity.js";
+import { CreateRepositoryRequest } from "../../requests/create-repository.request.js";
+import { CreateRepositoryResponse } from "../../responses/create-repository.response.js";
 
 @Injectable()
 export class CreateRepositoryUseCase {

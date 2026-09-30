@@ -9,6 +9,7 @@ export interface HeldPortReservation {
 }
 
 export interface PortReservationPort {
+  getAll(): Promise<Record<string, string>>;
   reservePort(port: number, ownerId: string): Promise<boolean>;
   holdPort(
     port: number,

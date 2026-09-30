@@ -4,8 +4,8 @@ import type { Server } from 'node:net'
 import type {
   HeldPortReservation,
   PortReservationPort,
-} from '../../application/port-reservation.port.js'
-import { RedisConnection } from './redis-connection.service.js'
+} from '../../../ports/application/port-reservation.port.js'
+import { RedisConnection } from '../../../shared/infrastructure/cache/redis-connection.service.js'
 
 const RESERVE_SCRIPT = `
   local portOwner = redis.call('GET', KEYS[1])
@@ -54,6 +54,26 @@ export class RedisPortReservationService implements PortReservationPort {
   private readonly logger = new Logger(RedisPortReservationService.name)
   private readonly heldPorts = new Map<string, HeldPort>()
   constructor(private readonly redis: RedisConnection) {}
+
+  async getAll(): Promise<Record<string, string>> {
+    const reservations: Record<string, string> = {}
+
+    for await (const ownerKeys of this.redis.client.scanIterator({
+      MATCH: 'port-reservation:owner:*',
+      COUNT: 100,
+    })) {
+      const ports = await this.redis.client.mGet(ownerKeys)
+
+      ownerKeys.forEach((ownerKey, index) => {
+        const port = Number(ports[index])
+        if (Number.isInteger(port) && port >= 1 && port <= 65535) {
+          reservations[ownerKey] = this.portKey(port)
+        }
+      })
+    }
+
+    return reservations
+  }
 
   async reservePort(port: number, ownerId: string): Promise<boolean> {
     if (!Number.isInteger(port) || port < 1 || port > 65535 || !ownerId) {

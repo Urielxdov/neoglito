@@ -1,10 +1,13 @@
-import type { ProjectDetailRepository } from "@neoglito/web/components/repositories/project-detail-modal";
-import type { ProjectDetailRepositoryInfo } from "@neoglito/web/components/repositories/project-detail-view";
-import type { ProjectDockerFilesResponse } from "@neoglito/web/api/contracts";
-import type { Project } from "@neoglito/web/models/project";
-import type { Repository } from "@neoglito/web/models/repository";
-import type { DeployEnvVar } from "@neoglito/web/state/projects/projects.reducer";
-import { shortName } from "@neoglito/web/utils/repository-name";
+import type { ProjectDetailRepository } from '@neoglito/web/components/repositories/project-detail-modal';
+import type { ProjectDetailRepositoryInfo } from '@neoglito/web/components/repositories/project-detail-view';
+import type { ProjectDockerFilesResponse } from '@neoglito/web/api/contracts';
+import type { Project } from '@neoglito/web/models/project';
+import type { Repository } from '@neoglito/web/models/repository';
+import type {
+  DeployComposePort,
+  DeployEnvVar,
+} from '@neoglito/web/state/projects/projects.reducer';
+import { shortName } from '@neoglito/web/utils/repository-name';
 
 function normalizePath(path: string): string {
   return path.replace(/\\/g, '/').replace(/\/$/, '');
@@ -220,4 +223,48 @@ export function getEnvironmentVariablesByRepositoryId(
   }
 
   return envByRepositoryId;
+}
+
+export function getComposePortsByRepositoryId(
+  repositories: Repository[],
+  clonedRepositoryPaths: string[],
+  composeAnalyses: ProjectDockerFilesResponse['composeAnalyses'],
+): Record<number, DeployComposePort[]> {
+  const portsByRepositoryId: Record<number, DeployComposePort[]> = {};
+  const normalizedClonedPaths = clonedRepositoryPaths.map((path) => ({
+    normalized: normalizePath(path),
+    name: getPathBasename(path).toLowerCase(),
+  }));
+  const normalizedComposeAnalyses = composeAnalyses.map((analysis) => ({
+    ...analysis,
+    normalized: normalizePath(analysis.dockerComposePath),
+  }));
+
+  for (const repository of repositories) {
+    const repositoryName = shortName(repository.name).toLowerCase();
+    const clonedRepositoryPath = normalizedClonedPaths.find(
+      (path) => path.name === repositoryName,
+    );
+
+    if (!clonedRepositoryPath) {
+      continue;
+    }
+
+    const ports = normalizedComposeAnalyses
+      .filter((analysis) =>
+        analysis.normalized.startsWith(`${clonedRepositoryPath.normalized}/`),
+      )
+      .flatMap((analysis) =>
+        analysis.ports.map((port) => ({
+          ...port,
+          dockerComposePath: analysis.dockerComposePath,
+        })),
+      );
+
+    if (ports.length > 0) {
+      portsByRepositoryId[repository.id] = ports;
+    }
+  }
+
+  return portsByRepositoryId;
 }

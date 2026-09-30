@@ -8,6 +8,7 @@ import { ENVIROMENT_VARIABLE_EXTRACT_PORT } from '../shared/application/envirome
 import { ExtractEnvironmentVariablesUseCase } from '../shared/application/extract-environment-variables.use-case.js';
 import { RecursiveFileFinderService } from '../shared/infrastructure/files/recursive-file-finder.service.js';
 import { YamlComposeEnviromentVariableExtractService } from '../shared/infrastructure/compose/yaml-compose-enviroment-variable-extract.service.js';
+import { YamlComposePortExtractService } from '../shared/infrastructure/compose/yaml-compose-port-extract.service.js';
 import { CloneProjectRepositoriesUseCase } from './application/use-cases/clone-project-repositories.use-case.js';
 import {
   DeployComposeUseCase,
@@ -32,6 +33,7 @@ import {
     GetProjectComposeFilesUseCase,
     InitDeployProjectUseCase,
     ExtractEnvironmentVariablesUseCase,
+    YamlComposePortExtractService,
     RecursiveFileFinderService,
     YamlComposeEnviromentVariableExtractService,
     {

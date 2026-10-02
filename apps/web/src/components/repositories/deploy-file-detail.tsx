@@ -2,7 +2,7 @@ import { X } from 'lucide';
 import type {
   DeployComposePort,
   DeployEnvVar,
-} from '@neoglito/web/state/projects/projects.reducer';
+} from '@neoglito/web/state/deploys/deploys.reducer';
 import { AppIcon } from '@neoglito/web/components/ui/app-icon';
 
 interface DeployFileDetailProps {

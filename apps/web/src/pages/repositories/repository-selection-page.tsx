@@ -6,6 +6,10 @@ import { RepositorySelectionPanel } from '@neoglito/web/components/repositories/
 import { projectService } from '@neoglito/web/services/project.service';
 import { useAuth } from '@neoglito/web/hooks/auth/use-auth';
 import {
+  deploysReducer,
+  initialDeploysState,
+} from '@neoglito/web/state/deploys/deploys.reducer';
+import {
   initialProjectsState,
   projectsReducer,
 } from '@neoglito/web/state/projects/projects.reducer';
@@ -49,6 +53,10 @@ export default function RepositorySelectionPage() {
     projectsReducer,
     initialProjectsState,
   );
+  const [deploysState, deploysDispatch] = useReducer(
+    deploysReducer,
+    initialDeploysState,
+  );
 
   const visibleRepositories = useMemo(
     () => getVisibleRepositories(allRepositories, repositoriesState.query),
@@ -90,6 +98,7 @@ export default function RepositorySelectionPage() {
     handleNewProject,
   } = useProjectCreation({
     canCreateProject,
+    deploysDispatch,
     loadProjects,
     projectsDispatch,
     projectsState,
@@ -100,6 +109,7 @@ export default function RepositorySelectionPage() {
   const { deployError: projectOpenError, handleOpenProject } = useProjectOpen({
     allProjects,
     allRepositories,
+    deploysDispatch,
     projectsDispatch,
   });
 
@@ -188,12 +198,12 @@ export default function RepositorySelectionPage() {
     startAnalysis(
       activeProject,
       activeProjectRepositories,
-      projectsState.deployPaths,
+      deploysState.deployPaths,
     );
   }, [
     activeProject,
     activeProjectRepositories,
-    projectsState.deployPaths,
+    deploysState.deployPaths,
     startAnalysis,
   ]);
 
@@ -230,6 +240,8 @@ export default function RepositorySelectionPage() {
             projectsLoading={projectsLoading}
             projectsError={projectsPanelError}
             nameTaken={nameTaken}
+            deploysDispatch={deploysDispatch}
+            deploysState={deploysState}
             projectsDispatch={projectsDispatch}
             projectsState={projectsState}
             selectedRepositories={selectedRepositories}
@@ -283,6 +295,8 @@ export default function RepositorySelectionPage() {
             projectsLoading={projectsLoading}
             projectsError={projectsPanelError}
             nameTaken={nameTaken}
+            deploysDispatch={deploysDispatch}
+            deploysState={deploysState}
             projectsDispatch={projectsDispatch}
             projectsState={projectsState}
             selectedRepositories={selectedRepositories}
@@ -303,9 +317,10 @@ export default function RepositorySelectionPage() {
           project={openProject}
           repositories={openProjectRepositories}
           onClose={() => projectsDispatch({ type: 'project-closed' })}
-          onViewDeploy={() =>
-            projectsDispatch({ type: 'detail-opened', id: openProject.id })
-          }
+          onViewDeploy={() => {
+            projectsDispatch({ type: 'detail-opened', id: openProject.id });
+            deploysDispatch({ type: 'deploy-row-closed' });
+          }}
         />
       )}
     </main>

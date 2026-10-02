@@ -1,4 +1,4 @@
-import type { DeployEnvVar } from "@neoglito/web/state/projects/projects.reducer"
+import type { DeployEnvVar } from "@neoglito/web/state/deploys/deploys.reducer"
 import { getMissingRequiredEnvCount } from "@neoglito/web/pages/repositories/repository-selection.helpers"
 import { DeployFileListItem } from "@neoglito/web/components/repositories/deploy-file-list-item"
 

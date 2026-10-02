@@ -3,6 +3,7 @@ import type { Dispatch } from 'react';
 import type { Project } from '@neoglito/web/models/project';
 import type { Repository } from '@neoglito/web/models/repository';
 import { projectService } from '@neoglito/web/services/project.service';
+import type { DeploysAction } from '@neoglito/web/state/deploys/deploys.reducer';
 import type { ProjectsAction } from '@neoglito/web/state/projects/projects.reducer';
 import {
   getComposePortsByRepositoryId,
@@ -14,12 +15,14 @@ import {
 interface UseProjectOpenOptions {
   allProjects: Project[];
   allRepositories: Repository[];
+  deploysDispatch: Dispatch<DeploysAction>;
   projectsDispatch: Dispatch<ProjectsAction>;
 }
 
 export function useProjectOpen({
   allProjects,
   allRepositories,
+  deploysDispatch,
   projectsDispatch,
 }: UseProjectOpenOptions) {
   const [deployError, setDeployError] = useState<string | null>(null);
@@ -54,7 +57,7 @@ export function useProjectOpen({
         ),
       );
 
-      projectsDispatch({
+      deploysDispatch({
         type: 'deploy-paths-discovered',
         projectId,
         pathsByRepositoryId: getDockerFilePathsByRepositoryId(
@@ -68,7 +71,7 @@ export function useProjectOpen({
           response.data.dockerFilesPath,
         ),
       });
-      projectsDispatch({
+      deploysDispatch({
         type: 'deploy-env-discovered',
         projectId,
         envByRepositoryId: getEnvironmentVariablesByRepositoryId(
@@ -77,7 +80,7 @@ export function useProjectOpen({
           response.data.composeAnalyses,
         ),
       });
-      projectsDispatch({
+      deploysDispatch({
         type: 'deploy-ports-discovered',
         projectId,
         portsByRepositoryId: getComposePortsByRepositoryId(
@@ -87,7 +90,7 @@ export function useProjectOpen({
         ),
       });
     },
-    [allProjects, allRepositories, projectsDispatch],
+    [allProjects, allRepositories, deploysDispatch, projectsDispatch],
   );
 
   return { deployError, handleOpenProject };

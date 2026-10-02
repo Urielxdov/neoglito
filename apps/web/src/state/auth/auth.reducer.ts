@@ -25,5 +25,9 @@ export function authReducer(
       return { status: 'authenticated', user: action.user }
     case 'unauthenticated':
       return { status: 'unauthenticated', user: null }
+    default: {
+      const _exhaustive: never = action
+      throw new Error(`Acción desconocida en authReducer: ${_exhaustive}`)
+    }
   }
 }

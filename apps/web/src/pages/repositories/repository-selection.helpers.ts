@@ -6,7 +6,7 @@ import type { Repository } from '@neoglito/web/models/repository';
 import type {
   DeployComposePort,
   DeployEnvVar,
-} from '@neoglito/web/state/projects/projects.reducer';
+} from '@neoglito/web/state/deploys/deploys.reducer';
 import { shortName } from '@neoglito/web/utils/repository-name';
 
 function normalizePath(path: string): string {

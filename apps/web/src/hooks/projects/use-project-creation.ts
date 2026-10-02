@@ -6,6 +6,7 @@ import type {
   ProjectsAction,
   ProjectsState,
 } from "@neoglito/web/state/projects/projects.reducer";
+import type { DeploysAction } from "@neoglito/web/state/deploys/deploys.reducer";
 import type { RepositoriesAction } from "@neoglito/web/state/repositories/repositories.reducer";
 import { projectService } from "@neoglito/web/services/project.service";
 import { shortName } from "@neoglito/web/utils/repository-name";
@@ -16,6 +17,7 @@ import {
 
 interface UseProjectCreationOptions {
   canCreateProject: boolean;
+  deploysDispatch: Dispatch<DeploysAction>;
   loadProjects(): Promise<void>;
   projectsDispatch: Dispatch<ProjectsAction>;
   projectsState: ProjectsState;
@@ -25,6 +27,7 @@ interface UseProjectCreationOptions {
 
 export function useProjectCreation({
   canCreateProject,
+  deploysDispatch,
   loadProjects,
   projectsDispatch,
   projectsState,
@@ -127,7 +130,7 @@ export function useProjectCreation({
       return;
     }
 
-    projectsDispatch({
+    deploysDispatch({
       type: 'deploy-paths-discovered',
       projectId,
       pathsByRepositoryId: getDockerFilePathsByRepositoryId(
@@ -146,6 +149,7 @@ export function useProjectCreation({
     await loadProjects();
   }, [
     canCreateProject,
+    deploysDispatch,
     loadProjects,
     projectsDispatch,
     projectsState.newDescription,

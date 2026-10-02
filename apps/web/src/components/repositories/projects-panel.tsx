@@ -3,6 +3,10 @@ import { Folder } from 'lucide';
 import type { Project } from '@neoglito/web/models/project';
 import type { Repository } from '@neoglito/web/models/repository';
 import type {
+  DeploysAction,
+  DeploysState,
+} from '@neoglito/web/state/deploys/deploys.reducer';
+import type {
   ProjectsAction,
   ProjectsState,
 } from '@neoglito/web/state/projects/projects.reducer';
@@ -22,6 +26,8 @@ interface ProjectsPanelProps {
   projectsLoading: boolean;
   projectsError: string | null;
   nameTaken: boolean;
+  deploysDispatch: Dispatch<DeploysAction>;
+  deploysState: DeploysState;
   projectsDispatch: Dispatch<ProjectsAction>;
   projectsState: ProjectsState;
   selectedRepositories: Repository[];
@@ -43,6 +49,8 @@ export function ProjectsPanel({
   projectsLoading,
   projectsError,
   nameTaken,
+  deploysDispatch,
+  deploysState,
   projectsDispatch,
   projectsState,
   selectedRepositories,
@@ -62,30 +70,33 @@ export function ProjectsPanel({
           <ProjectDetailView
             project={activeProject}
             repositories={activeProjectRepositories}
-            deployPaths={projectsState.deployPaths}
-            deployPathCandidates={projectsState.deployPathCandidates}
-            deployEnv={projectsState.deployEnv}
-            deployPorts={projectsState.deployPorts}
-            openKey={projectsState.openDeployKey}
+            deployPaths={deploysState.deployPaths}
+            deployPathCandidates={deploysState.deployPathCandidates}
+            deployEnv={deploysState.deployEnv}
+            deployPorts={deploysState.deployPorts}
+            openKey={deploysState.openDeployKey}
             detailTab={projectsState.detailTab}
             onTabChange={(tab) =>
               projectsDispatch({ type: 'detail-tab-changed', tab })
             }
-            onBack={() => projectsDispatch({ type: 'detail-closed' })}
+            onBack={() => {
+              projectsDispatch({ type: 'detail-closed' });
+              deploysDispatch({ type: 'deploy-row-closed' });
+            }}
             onSelectDeployFile={(key) =>
-              projectsDispatch({ type: 'deploy-row-toggled', key })
+              deploysDispatch({ type: 'deploy-row-toggled', key })
             }
             onPathChange={(key, path) =>
-              projectsDispatch({ type: 'deploy-path-changed', key, path })
+              deploysDispatch({ type: 'deploy-path-changed', key, path })
             }
             onEnvAdd={(key) =>
-              projectsDispatch({ type: 'deploy-env-row-added', key })
+              deploysDispatch({ type: 'deploy-env-row-added', key })
             }
             onEnvRemove={(key, index) =>
-              projectsDispatch({ type: 'deploy-env-row-removed', key, index })
+              deploysDispatch({ type: 'deploy-env-row-removed', key, index })
             }
             onEnvChange={(key, index, field, value) =>
-              projectsDispatch({
+              deploysDispatch({
                 type: 'deploy-env-row-changed',
                 key,
                 index,
@@ -94,7 +105,7 @@ export function ProjectsPanel({
               })
             }
             onPortChange={(key, index, dockerComposePath, publishedPort) =>
-              projectsDispatch({
+              deploysDispatch({
                 type: 'deploy-port-changed',
                 key,
                 index,

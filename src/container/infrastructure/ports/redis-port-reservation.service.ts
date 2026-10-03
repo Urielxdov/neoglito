@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
+import type { PortReservationsResponse } from '@neoglito/shared/ports'
 import { createServer } from 'node:net'
 import type { Server } from 'node:net'
 import type {
@@ -55,8 +56,8 @@ export class RedisPortReservationService implements PortReservationPort {
   private readonly heldPorts = new Map<string, HeldPort>()
   constructor(private readonly redis: RedisConnection) {}
 
-  async getAll(): Promise<Record<string, string>> {
-    const reservations: Record<string, string> = {}
+  async getAll(): Promise<PortReservationsResponse> {
+    const reservations: PortReservationsResponse = {}
 
     for await (const ownerKeys of this.redis.client.scanIterator({
       MATCH: 'port-reservation:owner:*',

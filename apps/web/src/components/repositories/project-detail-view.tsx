@@ -5,7 +5,7 @@ import type {
   DeployComposePort,
 } from '@neoglito/web/state/deploys/deploys.reducer';
 import type { ProjectsDetailTab } from '@neoglito/web/state/projects/projects.reducer';
-import { getMissingRequiredEnvCount } from '@neoglito/web/pages/repositories/repository-selection.helpers';
+import { getMissingRequiredEnvCount } from '@neoglito/web/utils/deploys/compose.helpers';
 import { AppIcon } from '@neoglito/web/components/ui/app-icon';
 import { DeployFileList } from '@neoglito/web/components/repositories/deploy-file-list';
 import { DeployFileDetail } from '@neoglito/web/components/repositories/deploy-file-detail';

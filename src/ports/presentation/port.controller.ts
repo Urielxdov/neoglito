@@ -1,4 +1,5 @@
 import { Controller, Get, Inject } from '@nestjs/common';
+import type { PortReservationsResponse } from '@neoglito/shared/ports';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PORT_RESERVATION_PORT } from '../application/port-reservation.port.js';
 import type { PortReservationPort } from '../application/port-reservation.port.js';
@@ -25,7 +26,7 @@ export class PortController {
       },
     },
   })
-  async availablePorts(): Promise<Record<string, string>> {
+  async availablePorts(): Promise<PortReservationsResponse> {
     return this.portReservation.getAll()
   }
 }

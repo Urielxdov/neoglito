@@ -32,6 +32,14 @@
       "types": "./src/repository/*.ts",
       "import": "./src/repository/*.ts"
     },
+    "./ports": {
+      "types": "./src/ports/index.ts",
+      "import": "./src/ports/index.ts"
+    },
+    "./ports/*": {
+      "types": "./src/ports/*.ts",
+      "import": "./src/ports/*.ts"
+    },
     "./text": {
       "types": "./src/text/index.ts",
       "import": "./src/text/index.ts"

@@ -23,7 +23,12 @@ import { JwtAuthGuard } from '../../auth/infrastructure/passport/jwt-auth.guard.
 import { ExtractEnvironmentVariablesUseCase } from '../../shared/application/extract-environment-variables.use-case.js';
 import { YamlComposePortExtractService } from '../../shared/infrastructure/compose/yaml-compose-port-extract.service.js';
 import type { AuthenticatedRequest } from '../../shared/presentation/http/authenticated-request.js';
-import type { InitProjectResponse, ProjectDockerFilesResponse } from '@neoglito/shared/repository';
+import type {
+  DeploymentResponse,
+  InitProjectResponse,
+  ProjectDockerFilesResponse,
+} from '@neoglito/shared/repository';
+import { toDeploymentResponse } from '../application/responses/deployment.response.js';
 import {
   ApiSuccessResponseDoc,
   ComposeAnalysisSchema,
@@ -127,12 +132,13 @@ export class DeploymentController {
   async deploy(
     @Req() request: AuthenticatedRequest,
     @Body() dto: DeployComposeDto,
-  ) {
-    return this.deployCompose.execute(
+  ): Promise<DeploymentResponse> {
+    const deployment = await this.deployCompose.execute(
       request.user.id,
       dto.projectId,
       dto.composePath,
     );
+    return toDeploymentResponse(deployment);
   }
 
   @Get('project/:projectId')
@@ -148,8 +154,11 @@ export class DeploymentController {
     },
     extraModels: [DeploymentSchema, DeploymentServiceSchema],
   })
-  async all(@Param('projectId', ParseIntPipe) projectId: number) {
-    return this.getDeployments.execute(projectId);
+  async all(
+    @Param('projectId', ParseIntPipe) projectId: number,
+  ): Promise<DeploymentResponse[]> {
+    const deployments = await this.getDeployments.execute(projectId);
+    return deployments.map(toDeploymentResponse);
   }
 
   @Post(':deploymentId/stop')
@@ -170,8 +179,10 @@ export class DeploymentController {
     dataSchema: { $ref: getSchemaPath(DeploymentSchema) },
     extraModels: [DeploymentSchema, DeploymentServiceSchema],
   })
-  async stop(@Param('deploymentId') deploymentId: string) {
-    return this.stopDeployment.execute(deploymentId);
+  async stop(
+    @Param('deploymentId') deploymentId: string,
+  ): Promise<DeploymentResponse> {
+    return toDeploymentResponse(await this.stopDeployment.execute(deploymentId));
   }
 }
 

@@ -1,31 +1,21 @@
-import { useCallback, useState } from 'react';
-import type { Dispatch } from 'react';
-import type { Project } from '@neoglito/web/models/project';
-import type { Repository } from '@neoglito/web/models/repository';
+import { useCallback } from 'react';
+import { useProjects } from '@neoglito/web/hooks/projects/use-projects';
+import { useRepositories } from '@neoglito/web/hooks/repositories/use-repositories';
 import { projectService } from '@neoglito/web/services/project.service';
-import type { DeploysAction } from '@neoglito/web/state/deploys/deploys.reducer';
-import type { ProjectsAction } from '@neoglito/web/state/projects/projects.reducer';
+import { useDeploysDispatch } from '@neoglito/web/state/deploys/deploys.context';
+import { useProjectsDispatch } from '@neoglito/web/state/projects/projects.context';
 import {
   getComposePortsByRepositoryId,
   getDockerFileCandidatesByRepositoryId,
   getDockerFilePathsByRepositoryId,
   getEnvironmentVariablesByRepositoryId,
-} from '@neoglito/web/pages/repositories/repository-selection.helpers';
+} from '@neoglito/web/utils/deploys/compose.helpers';
 
-interface UseProjectOpenOptions {
-  allProjects: Project[];
-  allRepositories: Repository[];
-  deploysDispatch: Dispatch<DeploysAction>;
-  projectsDispatch: Dispatch<ProjectsAction>;
-}
-
-export function useProjectOpen({
-  allProjects,
-  allRepositories,
-  deploysDispatch,
-  projectsDispatch,
-}: UseProjectOpenOptions) {
-  const [deployError, setDeployError] = useState<string | null>(null);
+export function useProjectOpen() {
+  const { allProjects } = useProjects();
+  const { allRepositories } = useRepositories();
+  const projectsDispatch = useProjectsDispatch();
+  const deploysDispatch = useDeploysDispatch();
 
   const handleOpenProject = useCallback(
     async (projectId: number) => {
@@ -42,14 +32,16 @@ export function useProjectOpen({
       const response = await projectService.environmentVariables({ projectId });
 
       if (!response.success || !response.data) {
-        setDeployError(
-          response.error?.message ??
+        projectsDispatch({
+          type: 'panel-error-set',
+          message:
+            response.error?.message ??
             'No fue posible buscar los archivos Docker del proyecto.',
-        );
+        });
         return;
       }
 
-      setDeployError(null);
+      projectsDispatch({ type: 'panel-error-set', message: null });
 
       const repositories = allRepositories.filter((repository) =>
         project.repositories.some(
@@ -93,5 +85,5 @@ export function useProjectOpen({
     [allProjects, allRepositories, deploysDispatch, projectsDispatch],
   );
 
-  return { deployError, handleOpenProject };
+  return { handleOpenProject };
 }

@@ -44,9 +44,11 @@ export interface ProjectsState {
   editSaved: boolean;
   editMessage: string | null;
   analyze: AnalyzeState | null;
+  panelError: string | null;
 }
 
 export type ProjectsAction =
+  | { type: 'panel-error-set'; message: string | null }
   | { type: 'creation-opened' }
   | { type: 'creation-cancelled' }
   | { type: 'name-changed'; name: string }
@@ -94,6 +96,7 @@ export const initialProjectsState: ProjectsState = {
   editSaved: false,
   editMessage: null,
   analyze: null,
+  panelError: null,
 };
 
 export function projectsReducer(
@@ -101,6 +104,8 @@ export function projectsReducer(
   action: ProjectsAction,
 ): ProjectsState {
   switch (action.type) {
+    case 'panel-error-set':
+      return { ...state, panelError: action.message };
     case 'creation-opened':
       return { ...state, creating: true };
     case 'creation-cancelled':

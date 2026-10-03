@@ -4,6 +4,7 @@ import type {
   CreateProjectResponse,
   InitProjectRequest,
   InitProjectResponse,
+  ProjectComposeFilesRequest,
   ProjectDockerFilesResponse,
   ProjectResponse,
   UpdateProjectRequest,
@@ -19,19 +20,22 @@ export const projectService = {
     return apiClient.post<CreateProjectResponse>('/project/registry', request)
   },
 
-  initialize(projectId: number): Promise<ApiResponse<string[]>> {
-    return apiClient.post<string[]>('/project/init_project', { projectId })
-  },
-
   init(request: InitProjectRequest): Promise<ApiResponse<InitProjectResponse>> {
     return apiClient.post<InitProjectResponse>('/project/init', request)
   },
 
-  dockerFilesPath(request: InitProjectRequest): Promise<ApiResponse<ProjectDockerFilesResponse>> {
+  dockerFilesPath(request: ProjectComposeFilesRequest): Promise<ApiResponse<ProjectDockerFilesResponse>> {
     return apiClient.post<ProjectDockerFilesResponse>('/deployment/docker_files', request)
   },
 
-  environmentVariables(request: InitProjectRequest): Promise<ApiResponse<ProjectDockerFilesResponse>> {
+  /**
+   * DEUDA TÉCNICA: es idéntico a `dockerFilesPath` (mismo endpoint y mismo tipo de respuesta).
+   * Su nombre es engañoso: no devuelve solo variables de entorno, sino el
+   * `ProjectDockerFilesResponse` completo (rutas, compose, variables y puertos).
+   * Hoy lo consume `use-project-open`. Pendiente: migrar ese hook a `dockerFilesPath`
+   * y eliminar este método.
+   */
+  environmentVariables(request: ProjectComposeFilesRequest): Promise<ApiResponse<ProjectDockerFilesResponse>> {
     return apiClient.post<ProjectDockerFilesResponse>('/deployment/docker_files', request)
   },
 

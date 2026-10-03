@@ -3,9 +3,11 @@ import type { IsoDateString } from '@neoglito/shared/api'
 export interface DeploymentServiceResponse {
   id: string
   composeServiceName: string
+  port: number
   status: string
   health: string
   lastObservedAt: IsoDateString
+  deploymentId: string
 }
 
 export interface DeploymentResponse {

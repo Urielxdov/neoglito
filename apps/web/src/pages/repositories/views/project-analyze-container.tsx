@@ -1,8 +1,9 @@
 import { ProjectAnalyzeView } from '@neoglito/web/components/repositories/project-analyze-view';
 import { useActiveProjectRepositories } from '@neoglito/web/hooks/projects/use-project-selectors';
 import type { Project } from '@neoglito/web/models/project';
-import type { AnalyzeState } from '@neoglito/web/state/projects/projects.reducer';
-import { useProjectsDispatch } from '@neoglito/web/state/projects/projects.context';
+import { useProjectAnalysis } from '@neoglito/web/hooks/projects/use-project-analysis';
+import { useAnalysisDispatch } from '@neoglito/web/state/analysis/analysis.context';
+import type { AnalyzeState } from '@neoglito/web/state/analysis/analysis.reducer';
 
 export function ProjectAnalyzeContainer({
   project,
@@ -11,7 +12,8 @@ export function ProjectAnalyzeContainer({
   project: Project;
   analyze: AnalyzeState;
 }) {
-  const projectsDispatch = useProjectsDispatch();
+  const analysisDispatch = useAnalysisDispatch();
+  const { closeAnalysis } = useProjectAnalysis();
   const repositories = useActiveProjectRepositories();
 
   return (
@@ -19,15 +21,15 @@ export function ProjectAnalyzeContainer({
       project={project}
       repositories={repositories}
       analyze={analyze}
-      onBack={() => projectsDispatch({ type: 'analyze-closed' })}
+      onBack={closeAnalysis}
       onToggleGroup={(id) =>
-        projectsDispatch({ type: 'analyze-group-toggled', repositoryId: id })
+        analysisDispatch({ type: 'analyze-group-toggled', repositoryId: id })
       }
       onSelectService={(key) =>
-        projectsDispatch({ type: 'analyze-service-selected', key })
+        analysisDispatch({ type: 'analyze-service-selected', key })
       }
       onTabChange={(tab) =>
-        projectsDispatch({ type: 'analyze-tab-changed', tab })
+        analysisDispatch({ type: 'analyze-tab-changed', tab })
       }
     />
   );

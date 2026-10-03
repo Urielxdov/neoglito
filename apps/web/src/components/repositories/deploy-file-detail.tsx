@@ -1,11 +1,16 @@
+import { useMemo } from 'react';
 import { X } from 'lucide';
 import type {
   DeployComposePort,
   DeployEnvVar,
 } from '@neoglito/web/state/deploys/deploys.reducer';
 import { AppIcon } from '@neoglito/web/components/ui/app-icon';
+import { usePorts } from '@neoglito/web/hooks/ports/use-ports';
+import { DeployPortField } from '@neoglito/web/components/repositories/deploy-port-field';
+import { parseReservations } from '@neoglito/web/utils/ports/port-reservations';
 
 interface DeployFileDetailProps {
+  projectId: number;
   repositoryName: string;
   path: string;
   candidates: string[];
@@ -23,6 +28,7 @@ interface DeployFileDetailProps {
 }
 
 export function DeployFileDetail({
+  projectId,
   repositoryName,
   path,
   candidates,
@@ -34,6 +40,13 @@ export function DeployFileDetail({
   onEnvChange,
   onPortChange,
 }: DeployFileDetailProps) {
+  const { reservedPorts, isLoading, isError } = usePorts();
+  const reservations = useMemo(
+    () => parseReservations(reservedPorts),
+    [reservedPorts],
+  );
+  const canCheckPorts = !isLoading && !isError;
+
   return (
     <div className="flex flex-1 flex-col gap-6 rounded-lg border border-[#e0e6ef] bg-white p-5 dark:border-[#253044] dark:bg-[#111826] sm:min-w-[320px]">
       <span className="text-[14px] font-semibold text-[#16202e] dark:text-[#e8edf6]">
@@ -107,24 +120,15 @@ export function DeployFileDetail({
                     {port.hostIp ? ` · ${port.hostIp}` : ''}
                   </span>
                 </span>
-                <label className="flex items-center gap-2 text-[11.5px] text-[#51607a] dark:text-[#a7b4c8]">
-                  Puerto del host
-                  <input
-                    value={port.publishedPort ?? ''}
-                    onChange={(event) =>
-                      onPortChange(
-                        index,
-                        port.dockerComposePath,
-                        event.target.value,
-                      )
-                    }
-                    placeholder={
-                      port.mappingType === 'range' ? '8000-8002' : '5173'
-                    }
-                    inputMode="numeric"
-                    className="h-8 w-[112px] rounded-md border border-[#d6dce5] bg-white px-2 font-mono text-[12px] text-[#16202e] outline-none placeholder:text-[#a7b4c8] focus:border-[#2257c4] dark:border-[#35435a] dark:bg-[#0c121d] dark:text-[#e8edf6]"
-                  />
-                </label>
+                <DeployPortField
+                  projectId={projectId}
+                  port={port}
+                  reservations={reservations}
+                  canCheckPorts={canCheckPorts}
+                  onChange={(publishedPort) =>
+                    onPortChange(index, port.dockerComposePath, publishedPort)
+                  }
+                />
               </div>
             ))}
           </div>

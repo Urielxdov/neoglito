@@ -1,14 +1,10 @@
 import { Folder } from 'lucide';
 import type { Project } from '@neoglito/web/models/project';
-import type {
-  DeployEnvVar,
-  DeployComposePort,
-} from '@neoglito/web/state/deploys/deploys.reducer';
 import type { ProjectsDetailTab } from '@neoglito/web/state/projects/projects.reducer';
-import { getMissingRequiredEnvCount } from '@neoglito/web/utils/deploys/compose.helpers';
+import { useDeployReadiness } from '@neoglito/web/hooks/deploys/use-deploy-readiness';
+import { shortName } from '@neoglito/web/utils/repository-name';
 import { AppIcon } from '@neoglito/web/components/ui/app-icon';
-import { DeployFileList } from '@neoglito/web/components/repositories/deploy-file-list';
-import { DeployFileDetail } from '@neoglito/web/components/repositories/deploy-file-detail';
+import { ProjectDeployTab } from '@neoglito/web/components/repositories/project-deploy-tab';
 import { ProjectGeneralTab } from '@neoglito/web/components/repositories/project-general-tab';
 
 export interface ProjectDetailRepositoryInfo {
@@ -20,96 +16,24 @@ export interface ProjectDetailRepositoryInfo {
 interface ProjectDetailViewProps {
   project: Project;
   repositories: ProjectDetailRepositoryInfo[];
-  deployPaths: Record<string, string>;
-  deployPathCandidates: Record<string, string[]>;
-  deployEnv: Record<string, DeployEnvVar[]>;
-  deployPorts: Record<string, DeployComposePort[]>;
-  openKey: string | null;
   detailTab: ProjectsDetailTab;
   onTabChange(tab: ProjectsDetailTab): void;
   onBack(): void;
-  onSelectDeployFile(key: string): void;
-  onPathChange(key: string, path: string): void;
-  onEnvAdd(key: string): void;
-  onEnvRemove(key: string, index: number): void;
-  onEnvChange(
-    key: string,
-    index: number,
-    field: 'key' | 'value',
-    value: string,
-  ): void;
-  onPortChange(
-    key: string,
-    index: number,
-    dockerComposePath: string,
-    publishedPort: string,
-  ): void;
   onAnalyze(): void;
-  editName: string;
-  editDescription: string;
-  editNameTaken: boolean;
-  editClean: boolean;
-  editSubmitting: boolean;
-  editSaved: boolean;
-  editMessage: string | null;
-  onEditNameChange(name: string): void;
-  onEditDescriptionChange(description: string): void;
-  onEditReset(): void;
-  onEditSave(): void;
-}
-
-function shortName(name: string): string {
-  const parts = name.split('/');
-  return parts[parts.length - 1];
 }
 
 export function ProjectDetailView({
   project,
   repositories,
-  deployPaths,
-  deployPathCandidates,
-  deployEnv,
-  deployPorts,
-  openKey,
   detailTab,
   onTabChange,
   onBack,
-  onSelectDeployFile,
-  onPathChange,
-  onEnvAdd,
-  onEnvRemove,
-  onEnvChange,
-  onPortChange,
   onAnalyze,
-  editName,
-  editDescription,
-  editNameTaken,
-  editClean,
-  editSubmitting,
-  editSaved,
-  editMessage,
-  onEditNameChange,
-  onEditDescriptionChange,
-  onEditReset,
-  onEditSave,
 }: ProjectDetailViewProps) {
-  const total = repositories.length;
-  const readyCount = repositories.filter((repository) => {
-    const key = `${project.id}:${repository.id}`;
-    const path = (deployPaths[key] ?? '').trim();
-    return (
-      path.length > 0 && getMissingRequiredEnvCount(deployEnv[key] ?? []) === 0
-    );
-  }).length;
-  const allReady = total > 0 && readyCount === total;
-
-  const selectedKey =
-    openKey ?? (repositories[0] ? `${project.id}:${repositories[0].id}` : null);
-  const selectedRepository = selectedKey
-    ? repositories.find(
-        (repository) => `${project.id}:${repository.id}` === selectedKey,
-      )
-    : undefined;
+  const { total, readyCount, allReady } = useDeployReadiness(
+    project,
+    repositories,
+  );
 
   const tabs: Array<{ key: ProjectsDetailTab; label: string; count: string }> =
     [
@@ -170,54 +94,8 @@ export function ProjectDetailView({
           ))}
         </div>
 
-        {detailTab === 'deploy' && selectedKey && (
-          <div className="flex flex-col gap-4">
-            <span className="text-[13px] leading-[1.5] text-[#8c98ac] dark:text-[#7a8699]">
-              Cada repositorio usa un archivo de despliegue. Selecciónalo para
-              confirmar la ruta y llenar sus variables de entorno.
-            </span>
-
-            <div className="flex flex-wrap items-start gap-4">
-              <DeployFileList
-                projectId={project.id}
-                repositories={repositories}
-                deployPaths={deployPaths}
-                deployEnv={deployEnv}
-                selectedKey={selectedKey}
-                onSelect={onSelectDeployFile}
-              />
-
-              {selectedRepository && (
-                <DeployFileDetail
-                  repositoryName={shortName(selectedRepository.name)}
-                  path={deployPaths[selectedKey] ?? ''}
-                  candidates={deployPathCandidates[selectedKey] ?? []}
-                  env={deployEnv[selectedKey] ?? []}
-                  ports={(deployPorts[selectedKey] ?? [])
-                    .map((port, index) => ({ port, index }))
-                    .filter(
-                      ({ port }) =>
-                        port.dockerComposePath.replace(/\\/g, '/') ===
-                        (deployPaths[selectedKey] ?? '').replace(/\\/g, '/'),
-                    )}
-                  onPathChange={(path) => onPathChange(selectedKey, path)}
-                  onEnvAdd={() => onEnvAdd(selectedKey)}
-                  onEnvRemove={(index) => onEnvRemove(selectedKey, index)}
-                  onEnvChange={(index, field, value) =>
-                    onEnvChange(selectedKey, index, field, value)
-                  }
-                  onPortChange={(index, dockerComposePath, publishedPort) =>
-                    onPortChange(
-                      selectedKey,
-                      index,
-                      dockerComposePath,
-                      publishedPort,
-                    )
-                  }
-                />
-              )}
-            </div>
-          </div>
+        {detailTab === 'deploy' && (
+          <ProjectDeployTab project={project} repositories={repositories} />
         )}
 
         {detailTab === 'routes' && (
@@ -280,22 +158,7 @@ export function ProjectDetailView({
           </div>
         )}
 
-        {detailTab === 'general' && (
-          <ProjectGeneralTab
-            name={editName}
-            description={editDescription}
-            nameTaken={editNameTaken}
-            clean={editClean}
-            submitting={editSubmitting}
-            saved={editSaved}
-            message={editMessage}
-            meta={`Creado ${project.createdAt.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}`}
-            onNameChange={onEditNameChange}
-            onDescriptionChange={onEditDescriptionChange}
-            onReset={onEditReset}
-            onSave={onEditSave}
-          />
-        )}
+        {detailTab === 'general' && <ProjectGeneralTab project={project} />}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e6eaf0] bg-[#f8fafc] px-6 py-4 dark:border-[#253044] dark:bg-[#0c121d]">

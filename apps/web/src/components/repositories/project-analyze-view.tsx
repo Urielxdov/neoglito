@@ -1,15 +1,11 @@
 import type { Project } from "@neoglito/web/models/project"
 import type { ProjectDetailRepositoryInfo } from "@neoglito/web/components/repositories/project-detail-view"
-import type { AnalyzeState, AnalyzeTab } from "@neoglito/web/state/projects/projects.reducer"
+import type { AnalyzeState, AnalyzeTab } from "@neoglito/web/state/analysis/analysis.reducer"
 import { formatRelativeTime } from "@neoglito/web/utils/relative-time"
 import { AnalyzeRepoGroup } from "@neoglito/web/components/repositories/analyze-repo-group"
 import { AnalyzeRelationsPlaceholder } from "@neoglito/web/components/repositories/analyze-relations-placeholder"
 import { serviceTone } from "@neoglito/web/components/repositories/analyze-service-tone"
-
-function shortName(name: string): string {
-  const parts = name.split('/')
-  return parts[parts.length - 1]
-}
+import { shortName } from "@neoglito/web/utils/repository-name"
 
 interface ProjectAnalyzeViewProps {
   project: Project

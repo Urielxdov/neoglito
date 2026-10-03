@@ -18,6 +18,7 @@ import { Deployment } from '../../domain/entities/deployment.entity.js';
 import type { DeploymentStatus } from '../../domain/entities/deployment.entity.js';
 import { CONTAINER_RUNTIME_PORT } from '../../../container/application/container-runtime.port.js';
 import type { ContainerRuntimePort } from '../../../container/application/container-runtime.port.js';
+import { draftPortOwnerId } from '../../../ports/application/draft-port-owner.js';
 import { PORT_RESERVATION_PORT } from '../../../ports/application/port-reservation.port.js';
 import type {
   HeldPortReservation,
@@ -106,6 +107,8 @@ export class DeployComposeUseCase {
     try {
       const publishedPorts = await this.extractPublishedPorts(composeFile);
       for (const port of publishedPorts) {
+        // El puerto pasa del formulario (reserva provisional) al despliegue.
+        await this.portReservation.releasePort(draftPortOwnerId(projectId, port));
         const ownerId = this.deploymentPortOwnerId(deployment.id, port);
         const heldPort = await this.portReservation.holdPort(port, ownerId);
         if (!heldPort) {

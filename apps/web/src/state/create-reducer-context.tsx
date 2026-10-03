@@ -6,8 +6,12 @@ export function createReducerContext<State, Action>(
   reducer: Reducer<State, Action>,
   initialState: State,
 ) {
-  const StateContext = createContext<State | null>(null);
-  const DispatchContext = createContext<Dispatch<Action> | null>(null);
+  // Centinela propio: el estado puede ser legítimamente `null`.
+  const MISSING = Symbol(`${name}Provider missing`);
+  const StateContext = createContext<State | typeof MISSING>(MISSING);
+  const DispatchContext = createContext<Dispatch<Action> | typeof MISSING>(
+    MISSING,
+  );
 
   function Provider({ children }: PropsWithChildren) {
     const [state, dispatch] = useReducer(reducer, initialState);
@@ -21,7 +25,7 @@ export function createReducerContext<State, Action>(
 
   function useState(): State {
     const state = useContext(StateContext);
-    if (state === null) {
+    if (state === MISSING) {
       throw new Error(`use${name}State must be used within ${name}Provider`);
     }
     return state;
@@ -29,7 +33,7 @@ export function createReducerContext<State, Action>(
 
   function useDispatch(): Dispatch<Action> {
     const dispatch = useContext(DispatchContext);
-    if (dispatch === null) {
+    if (dispatch === MISSING) {
       throw new Error(`use${name}Dispatch must be used within ${name}Provider`);
     }
     return dispatch;

@@ -12,7 +12,11 @@ export interface HeldPortReservation {
 
 export interface PortReservationPort {
   getAll(): Promise<PortReservationsResponse>;
-  reservePort(port: number, ownerId: string): Promise<boolean>;
+  reservePort(
+    port: number,
+    ownerId: string,
+    ttlSeconds?: number,
+  ): Promise<boolean>;
   holdPort(
     port: number,
     ownerId: string,

@@ -1,5 +1,3 @@
-import type { DeploymentResponse } from '@neoglito/web/api/contracts';
-
 export type ProjectsPhase = 'list' | 'detail' | 'analyze';
 export type ProjectsDetailTab = 'deploy' | 'routes' | 'repos' | 'general';
 
@@ -7,25 +5,6 @@ export interface CreationProgress {
   done: number;
   total: number;
   label: string;
-}
-
-export type AnalyzeRepoStatus = 'pending' | 'succeeded' | 'failed';
-
-export interface AnalyzeRepoState {
-  repositoryId: number;
-  status: AnalyzeRepoStatus;
-  deployment: DeploymentResponse | null;
-  message: string | null;
-}
-
-export type AnalyzeTab = 'services' | 'relations';
-
-export interface AnalyzeState {
-  projectId: number;
-  repos: AnalyzeRepoState[];
-  collapsed: Record<number, boolean>;
-  selectedKey: string | null;
-  tab: AnalyzeTab;
 }
 
 export interface ProjectsState {
@@ -43,7 +22,6 @@ export interface ProjectsState {
   editSubmitting: boolean;
   editSaved: boolean;
   editMessage: string | null;
-  analyze: AnalyzeState | null;
   panelError: string | null;
 }
 
@@ -68,17 +46,8 @@ export type ProjectsAction =
   | { type: 'edit-submitting' }
   | { type: 'edit-succeeded' }
   | { type: 'edit-failed'; message: string }
-  | { type: 'analyze-opened'; projectId: number; repositoryIds: number[] }
-  | { type: 'analyze-closed' }
-  | {
-      type: 'analyze-repo-succeeded';
-      repositoryId: number;
-      deployment: DeploymentResponse;
-    }
-  | { type: 'analyze-repo-failed'; repositoryId: number; message: string }
-  | { type: 'analyze-group-toggled'; repositoryId: number }
-  | { type: 'analyze-service-selected'; key: string }
-  | { type: 'analyze-tab-changed'; tab: AnalyzeTab };
+  | { type: 'analyze-phase-entered' }
+  | { type: 'analyze-phase-left' };
 
 export const initialProjectsState: ProjectsState = {
   creating: false,
@@ -95,7 +64,6 @@ export const initialProjectsState: ProjectsState = {
   editSubmitting: false,
   editSaved: false,
   editMessage: null,
-  analyze: null,
   panelError: null,
 };
 
@@ -210,100 +178,9 @@ export function projectsReducer(
       };
     case 'edit-failed':
       return { ...state, editSubmitting: false, editMessage: action.message };
-    case 'analyze-opened':
-      return {
-        ...state,
-        phase: 'analyze',
-        analyze: {
-          projectId: action.projectId,
-          repos: action.repositoryIds.map((repositoryId) => ({
-            repositoryId,
-            status: 'pending',
-            deployment: null,
-            message: null,
-          })),
-          collapsed: {},
-          selectedKey: null,
-          tab: 'services',
-        },
-      };
-    case 'analyze-closed':
-      return {
-        ...state,
-        phase: 'detail',
-        analyze: null,
-        detailTab: 'deploy',
-      };
-    case 'analyze-repo-succeeded': {
-      if (!state.analyze) return state;
-
-      return {
-        ...state,
-        analyze: {
-          ...state.analyze,
-          repos: state.analyze.repos.map((repo) =>
-            repo.repositoryId === action.repositoryId
-              ? {
-                  ...repo,
-                  status: 'succeeded',
-                  deployment: action.deployment,
-                  message: null,
-                }
-              : repo,
-          ),
-        },
-      };
-    }
-    case 'analyze-repo-failed': {
-      if (!state.analyze) return state;
-
-      return {
-        ...state,
-        analyze: {
-          ...state.analyze,
-          repos: state.analyze.repos.map((repo) =>
-            repo.repositoryId === action.repositoryId
-              ? {
-                  ...repo,
-                  status: 'failed',
-                  deployment: null,
-                  message: action.message,
-                }
-              : repo,
-          ),
-        },
-      };
-    }
-    case 'analyze-group-toggled': {
-      if (!state.analyze) return state;
-
-      return {
-        ...state,
-        analyze: {
-          ...state.analyze,
-          collapsed: {
-            ...state.analyze.collapsed,
-            [action.repositoryId]:
-              !state.analyze.collapsed[action.repositoryId],
-          },
-        },
-      };
-    }
-    case 'analyze-service-selected': {
-      if (!state.analyze) return state;
-
-      return {
-        ...state,
-        analyze: { ...state.analyze, selectedKey: action.key },
-      };
-    }
-    case 'analyze-tab-changed': {
-      if (!state.analyze) return state;
-
-      return {
-        ...state,
-        analyze: { ...state.analyze, tab: action.tab },
-      };
-    }
+    case 'analyze-phase-entered':
+      return { ...state, phase: 'analyze' };
+    case 'analyze-phase-left':
+      return { ...state, phase: 'detail', detailTab: 'deploy' };
   }
 }

@@ -1,32 +1,36 @@
+import { useProjectEditing } from '@neoglito/web/hooks/projects/use-project-editing'
+import type { Project } from '@neoglito/web/models/project'
+import {
+  useProjectsDispatch,
+  useProjectsState,
+} from '@neoglito/web/state/projects/projects.context'
+
 interface ProjectGeneralTabProps {
-  name: string
-  description: string
-  nameTaken: boolean
-  clean: boolean
-  submitting: boolean
-  meta: string
-  message: string | null
-  saved: boolean
-  onNameChange(name: string): void
-  onDescriptionChange(description: string): void
-  onReset(): void
-  onSave(): void
+  project: Project
 }
 
-export function ProjectGeneralTab({
-  name,
-  description,
-  nameTaken,
-  clean,
-  submitting,
-  meta,
-  message,
-  saved,
-  onNameChange,
-  onDescriptionChange,
-  onReset,
-  onSave,
-}: ProjectGeneralTabProps) {
+export function ProjectGeneralTab({ project }: ProjectGeneralTabProps) {
+  const dispatch = useProjectsDispatch()
+  const { editSubmitting, editSaved, editMessage } = useProjectsState()
+  const {
+    editName: name,
+    editDescription: description,
+    editNameTaken: nameTaken,
+    editClean: clean,
+    handleSaveGeneral,
+  } = useProjectEditing()
+
+  const submitting = editSubmitting
+  const saved = editSaved
+  const message = editMessage
+  const meta = `Creado ${project.createdAt.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}`
+  const onNameChange = (value: string) =>
+    dispatch({ type: 'edit-name-changed', name: value })
+  const onDescriptionChange = (value: string) =>
+    dispatch({ type: 'edit-description-changed', description: value })
+  const onReset = () => dispatch({ type: 'edit-reset' })
+  const onSave = () => void handleSaveGeneral()
+
   const cantSave = clean || nameTaken || !name.trim() || !description.trim()
 
   return (

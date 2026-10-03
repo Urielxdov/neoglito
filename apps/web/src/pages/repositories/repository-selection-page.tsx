@@ -8,6 +8,7 @@ import {
   useOpenProject,
   useOpenProjectRepositories,
 } from '@neoglito/web/hooks/projects/use-project-selectors';
+import { AnalysisProvider, useAnalysisState } from '@neoglito/web/state/analysis/analysis.context';
 import { DeploysProvider, useDeploysDispatch } from '@neoglito/web/state/deploys/deploys.context';
 import { ProjectsProvider, useProjectsDispatch, useProjectsState } from '@neoglito/web/state/projects/projects.context';
 import { RepositoriesProvider } from '@neoglito/web/state/repositories/repositories.context';
@@ -16,6 +17,7 @@ import { usePorts } from '@neoglito/web/hooks/ports/use-ports';
 function RepositorySelectionLayout() {
   usePorts();
   const projectsState = useProjectsState();
+  const analysisState = useAnalysisState();
   const projectsDispatch = useProjectsDispatch();
   const deploysDispatch = useDeploysDispatch();
   const activeProject = useActiveProject();
@@ -26,12 +28,12 @@ function RepositorySelectionLayout() {
     if (
       projectsState.phase === 'analyze' &&
       activeProject &&
-      projectsState.analyze
+      analysisState
     ) {
       return (
         <ProjectAnalyzeContainer
           project={activeProject}
-          analyze={projectsState.analyze}
+          analyze={analysisState}
         />
       );
     }
@@ -80,7 +82,9 @@ export default function RepositorySelectionPage() {
     <RepositoriesProvider>
       <ProjectsProvider>
         <DeploysProvider>
-          <RepositorySelectionLayout />
+          <AnalysisProvider>
+            <RepositorySelectionLayout />
+          </AnalysisProvider>
         </DeploysProvider>
       </ProjectsProvider>
     </RepositoriesProvider>

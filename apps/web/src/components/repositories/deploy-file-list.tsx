@@ -1,6 +1,7 @@
 import type { DeployEnvVar } from "@neoglito/web/state/deploys/deploys.reducer"
 import { getMissingRequiredEnvCount } from "@neoglito/web/utils/deploys/compose.helpers"
 import { DeployFileListItem } from "@neoglito/web/components/repositories/deploy-file-list-item"
+import { shortName } from "@neoglito/web/utils/repository-name"
 
 export interface DeployFileListRepository {
   id: number
@@ -14,11 +15,6 @@ interface DeployFileListProps {
   deployEnv: Record<string, DeployEnvVar[]>
   selectedKey: string
   onSelect(key: string): void
-}
-
-function shortName(name: string): string {
-  const parts = name.split('/')
-  return parts[parts.length - 1]
 }
 
 export function DeployFileList({

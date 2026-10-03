@@ -19,6 +19,10 @@ const RESERVE_SCRIPT = `
   end
   redis.call('SET', KEYS[1], ARGV[1])
   redis.call('SET', KEYS[2], ARGV[2])
+  if ARGV[3] then
+    redis.call('EXPIRE', KEYS[1], ARGV[3])
+    redis.call('EXPIRE', KEYS[2], ARGV[3])
+  end
   return 1
 `
 
@@ -76,7 +80,11 @@ export class RedisPortReservationService implements PortReservationPort {
     return reservations
   }
 
-  async reservePort(port: number, ownerId: string): Promise<boolean> {
+  async reservePort(
+    port: number,
+    ownerId: string,
+    ttlSeconds?: number,
+  ): Promise<boolean> {
     if (!Number.isInteger(port) || port < 1 || port > 65535 || !ownerId) {
       this.logger.error(
         `Failed to reserve port ${port} for owner ${ownerId}: invalid port or ownerId`,
@@ -107,7 +115,11 @@ export class RedisPortReservationService implements PortReservationPort {
 
     const result = await this.redis.client.eval(RESERVE_SCRIPT, {
       keys: [portKey, ownerKey],
-      arguments: [ownerId, String(port)],
+      arguments: [
+        ownerId,
+        String(port),
+        ...(ttlSeconds ? [String(Math.ceil(ttlSeconds))] : []),
+      ],
     })
 
     if (result !== 1) {

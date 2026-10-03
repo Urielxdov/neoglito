@@ -124,7 +124,7 @@ export class AuthController {
     });
 
     return {
-      url: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+      url: process.env.FRONTEND_URL ?? 'http://localhost:5174',
       statusCode: 302,
     };
   }

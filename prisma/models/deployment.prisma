@@ -24,6 +24,18 @@ enum ContainerHealth {
   none
 }
 
+enum ServiceType {
+  BACKEND
+  FRONTEND
+  DATABASE
+  CACHE
+  MESSAGE_BROKER
+  WORKER
+  SCHEDULER
+  REVERSE_PROXY
+  UNKNOWN
+}
+
 model Deployment {
   id          String              @id @default(uuid())
   projectId   Int

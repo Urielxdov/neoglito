@@ -5,8 +5,8 @@ import type { Server } from 'node:net'
 import type {
   HeldPortReservation,
   PortReservationPort,
-} from '../../../ports/application/port-reservation.port.js'
-import { RedisConnection } from '../../../shared/infrastructure/cache/redis-connection.service.js'
+} from '../application/port-reservation.port.js'
+import { RedisConnection } from '../../shared/infrastructure/cache/redis-connection.service.js'
 
 const RESERVE_SCRIPT = `
   local portOwner = redis.call('GET', KEYS[1])

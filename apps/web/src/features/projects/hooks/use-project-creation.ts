@@ -1,47 +1,36 @@
-import { useCallback, useState } from 'react';
-import type { Dispatch } from 'react';
-import type { Repository } from "@neoglito/web/features/repositories/repository.model";
+import { useCallback } from 'react';
+import { useProjects } from '@neoglito/web/features/projects/hooks/use-projects';
+import { useProjectCreationStatus } from '@neoglito/web/features/projects/hooks/use-project-selectors';
+import { useSelectedRepositories } from '@neoglito/web/features/repositories/use-repository-selectors';
 import { repositoryService } from "@neoglito/web/features/repositories/repository.service";
-import type {
-  ProjectsAction,
-  ProjectsState,
-} from "@neoglito/web/features/projects/projects.reducer";
-import type { RepositoriesAction } from "@neoglito/web/features/repositories/repositories.reducer";
+import { useDeploysDispatch } from '@neoglito/web/features/deploys/deploys.context';
+import { useProjectsDispatch, useProjectsState } from '@neoglito/web/features/projects/projects.context';
+import { useRepositoriesDispatch } from '@neoglito/web/features/repositories/repositories.context';
 import { projectService } from "@neoglito/web/features/projects/project.service";
 import { shortName } from "@neoglito/web/features/repositories/repository-name";
 import {
   getDockerFileCandidatesByRepositoryId,
   getDockerFilePathsByRepositoryId,
-} from "@neoglito/web/features/projects/project.helpers";
+} from "@neoglito/web/features/projects/compose.helpers";
 
-interface UseProjectCreationOptions {
-  canCreateProject: boolean;
-  loadProjects(): Promise<void>;
-  projectsDispatch: Dispatch<ProjectsAction>;
-  projectsState: ProjectsState;
-  repositoriesDispatch: Dispatch<RepositoriesAction>;
-  selectedRepositories: Repository[];
-}
-
-export function useProjectCreation({
-  canCreateProject,
-  loadProjects,
-  projectsDispatch,
-  projectsState,
-  repositoriesDispatch,
-  selectedRepositories,
-}: UseProjectCreationOptions) {
-  const [creationError, setCreationError] = useState<string | null>(null);
+export function useProjectCreation() {
+  const { refresh: loadProjects } = useProjects();
+  const { newName, newDescription } = useProjectsState();
+  const projectsDispatch = useProjectsDispatch();
+  const deploysDispatch = useDeploysDispatch();
+  const repositoriesDispatch = useRepositoriesDispatch();
+  const selectedRepositories = useSelectedRepositories();
+  const { canCreateProject } = useProjectCreationStatus();
 
   const handleClearSelection = useCallback(() => {
-    setCreationError(null);
+    projectsDispatch({ type: 'panel-error-set', message: null });
     repositoriesDispatch({ type: 'selection-cleared' });
     projectsDispatch({ type: 'creation-cancelled' });
   }, [projectsDispatch, repositoriesDispatch]);
 
   const handleNewProject = useCallback(() => {
     if (selectedRepositories.length > 0) {
-      setCreationError(null);
+      projectsDispatch({ type: 'panel-error-set', message: null });
       projectsDispatch({ type: 'creation-opened' });
     }
   }, [projectsDispatch, selectedRepositories.length]);
@@ -49,10 +38,13 @@ export function useProjectCreation({
   const handleCreateProject = useCallback(async () => {
     if (!canCreateProject) return;
 
-    setCreationError(null);
+    const setError = (message: string) =>
+      projectsDispatch({ type: 'panel-error-set', message });
 
-    const name = projectsState.newName.trim();
-    const description = projectsState.newDescription.trim();
+    projectsDispatch({ type: 'panel-error-set', message: null });
+
+    const name = newName.trim();
+    const description = newDescription.trim();
     const repositoriesToLink = selectedRepositories;
     const total = repositoriesToLink.length + 2;
 
@@ -67,7 +59,7 @@ export function useProjectCreation({
     const projectResponse = await projectService.create({ name, description });
 
     if (!projectResponse.success || !projectResponse.data) {
-      setCreationError(
+      setError(
         projectResponse.error?.message ?? 'No fue posible crear el proyecto.',
       );
       projectsDispatch({
@@ -95,7 +87,7 @@ export function useProjectCreation({
       });
 
       if (!linkResponse.success) {
-        setCreationError(
+        setError(
           `El proyecto se creó, pero no fue posible vincular ${repository.name}: ${linkResponse.error?.message ?? 'error desconocido'}`,
         );
         projectsDispatch({
@@ -116,7 +108,7 @@ export function useProjectCreation({
     const initResponse = await projectService.init({ projectId });
 
     if (!initResponse.success || !initResponse.data) {
-      setCreationError(
+      setError(
         initResponse.error?.message ??
           'El proyecto se creó, pero no fue posible inicializar el despliegue.',
       );
@@ -127,7 +119,7 @@ export function useProjectCreation({
       return;
     }
 
-    projectsDispatch({
+    deploysDispatch({
       type: 'deploy-paths-discovered',
       projectId,
       pathsByRepositoryId: getDockerFilePathsByRepositoryId(
@@ -146,18 +138,14 @@ export function useProjectCreation({
     await loadProjects();
   }, [
     canCreateProject,
+    deploysDispatch,
     loadProjects,
+    newDescription,
+    newName,
     projectsDispatch,
-    projectsState.newDescription,
-    projectsState.newName,
     repositoriesDispatch,
     selectedRepositories,
   ]);
 
-  return {
-    creationError,
-    handleClearSelection,
-    handleCreateProject,
-    handleNewProject,
-  };
+  return { handleClearSelection, handleCreateProject, handleNewProject };
 }

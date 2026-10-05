@@ -68,7 +68,7 @@ Para iniciar sesion con GitHub, crea una OAuth App desde GitHub:
 3. Usa estos valores para desarrollo local:
 
 ```text
-Homepage URL: http://localhost:5173
+Homepage URL: http://localhost:5174
 Authorization callback URL: http://localhost:3000/auth/github/callback
 ```
 
@@ -94,7 +94,7 @@ BACKEND_URL=http://localhost:3000
 GITHUB_CALLBACK_URL=http://localhost:3000/auth/github/callback
 
 JWT_SECRET=una-clave-larga-y-aleatoria
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:5174
 VITE_API_URL=http://localhost:3000
 NODE_TLS_REJECT_UNAUTHORIZED=1
 ```
@@ -116,7 +116,7 @@ docker compose up
 Esto levanta:
 
 - API NestJS en `http://localhost:3000`
-- Frontend React/Vite en `http://localhost:5173`
+- Frontend React/Vite en `http://localhost:5174`
 - PostgreSQL en `localhost:5432`
 
 El servicio de API ejecuta Prisma y arranca el backend en modo desarrollo. El frontend se inicia con Vite y queda disponible desde el navegador.

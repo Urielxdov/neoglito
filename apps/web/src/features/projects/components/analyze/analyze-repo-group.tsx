@@ -1,6 +1,6 @@
 import { ChevronRight } from 'lucide'
 import { AppIcon } from "@neoglito/web/shared/components/app-icon"
-import type { AnalyzeRepoStatus } from "@neoglito/web/features/projects/projects.reducer"
+import type { AnalyzeRepoStatus } from "@neoglito/web/features/analysis/analysis.reducer"
 import { serviceTone } from "@neoglito/web/features/projects/components/analyze/analyze-service-tone"
 
 export interface AnalyzeGroupService {

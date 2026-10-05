@@ -79,4 +79,8 @@ export const apiClient = {
       body: JSON.stringify(body),
     })
   },
+
+  delete<T>(path: string): Promise<ApiResponse<T>> {
+    return this.request<T>(path, { method: 'DELETE' })
+  },
 }

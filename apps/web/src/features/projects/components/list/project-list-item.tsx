@@ -1,10 +1,6 @@
 import type { Project } from "@neoglito/web/features/projects/project.model"
 import { formatRelativeTime } from "@neoglito/web/shared/utils/relative-time"
-
-function shortName(name: string): string {
-  const parts = name.split('/')
-  return parts[parts.length - 1]
-}
+import { shortName } from "@neoglito/web/features/repositories/repository-name"
 
 interface ProjectListItemProps {
   project: Project

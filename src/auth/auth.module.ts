@@ -37,7 +37,7 @@ import { JwtAuthGuard } from "./infrastructure/passport/jwt-auth.guard.js";
             useClass: Aes256GcmEncryptionService,
         },
     ],
-    exports: [JwtModule, JwtAuthGuard]
+    exports: [JwtModule, PassportModule, JwtAuthGuard]
 })
 
 

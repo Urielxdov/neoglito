@@ -2,8 +2,15 @@ import { Folder, X } from 'lucide'
 import type { Project } from "@neoglito/web/features/projects/project.model"
 import { formatDate, formatRelativeTime } from "@neoglito/web/shared/utils/relative-time"
 import { AppIcon } from "@neoglito/web/shared/components/app-icon"
-import type { ProjectDetailRepository } from "@neoglito/web/features/projects/project.types"
 
+export interface ProjectDetailRepository {
+  id: number
+  full: string
+  description: string
+  language: string
+  visibility: string
+  shared: string
+}
 
 interface ProjectDetailModalProps {
   project: Project

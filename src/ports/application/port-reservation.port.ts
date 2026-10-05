@@ -1,3 +1,5 @@
+import type { PortReservationsResponse } from '@neoglito/shared/ports';
+
 export const PORT_RESERVATION_PORT = Symbol('PORT_RESERVATION_PORT');
 
 export interface HeldPortReservation {
@@ -9,8 +11,12 @@ export interface HeldPortReservation {
 }
 
 export interface PortReservationPort {
-  getAll(): Promise<Record<string, string>>;
-  reservePort(port: number, ownerId: string): Promise<boolean>;
+  getAll(): Promise<PortReservationsResponse>;
+  reservePort(
+    port: number,
+    ownerId: string,
+    ttlSeconds?: number,
+  ): Promise<boolean>;
   holdPort(
     port: number,
     ownerId: string,

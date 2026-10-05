@@ -5,7 +5,7 @@ import { CreateRepositoryResponse } from "../application/responses/create-reposi
 import { CreateRepositoryUseCase } from "../application/use-cases/repository/create-repository.use-case.js";
 import { CloneRepositoryUseCase } from "../application/use-cases/repository/clone-repository.use-case.js";
 import { CloneRepositoryDto } from "../application/dto/clone-repository.dto.js";
-import type { CloneRepositoryResponse } from "@neoglito/shared/repository";
+import type { CloneRepositoryResponse, RepositoryResponse } from "@neoglito/shared/repository";
 import { JwtAuthGuard } from "../../auth/infrastructure/passport/jwt-auth.guard.js";
 import type { AuthenticatedRequest } from "../../shared/presentation/http/authenticated-request.js";
 import { GetRepositoriesUseCase } from "../application/use-cases/repository/get-repositories.use-case.js";
@@ -80,7 +80,7 @@ export class RepositoryController {
     })
     @ApiUnauthorizedResponse({ description: 'Usuario no autenticado' })
     @ApiBearerAuth()
-    async all(@Req() request: AuthenticatedRequest) {
+    async all(@Req() request: AuthenticatedRequest): Promise<RepositoryResponse[]> {
         return await this.getRepositories.execute(request.user.id)
     }
 }

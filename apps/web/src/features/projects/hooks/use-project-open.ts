@@ -1,28 +1,21 @@
-import { useCallback, useState } from 'react';
-import type { Dispatch } from 'react';
-import type { Project } from '@neoglito/web/features/projects/project.model';
-import type { Repository } from '@neoglito/web/features/repositories/repository.model';
+import { useCallback } from 'react';
+import { useProjects } from '@neoglito/web/features/projects/hooks/use-projects';
+import { useRepositories } from '@neoglito/web/features/repositories/use-repositories';
 import { projectService } from '@neoglito/web/features/projects/project.service';
-import type { ProjectsAction } from '@neoglito/web/features/projects/projects.reducer';
+import { useDeploysDispatch } from '@neoglito/web/features/deploys/deploys.context';
+import { useProjectsDispatch } from '@neoglito/web/features/projects/projects.context';
 import {
   getComposePortsByRepositoryId,
   getDockerFileCandidatesByRepositoryId,
   getDockerFilePathsByRepositoryId,
   getEnvironmentVariablesByRepositoryId,
-} from '@neoglito/web/features/projects/project.helpers';
+} from '@neoglito/web/features/projects/compose.helpers';
 
-interface UseProjectOpenOptions {
-  allProjects: Project[];
-  allRepositories: Repository[];
-  projectsDispatch: Dispatch<ProjectsAction>;
-}
-
-export function useProjectOpen({
-  allProjects,
-  allRepositories,
-  projectsDispatch,
-}: UseProjectOpenOptions) {
-  const [deployError, setDeployError] = useState<string | null>(null);
+export function useProjectOpen() {
+  const { allProjects } = useProjects();
+  const { allRepositories } = useRepositories();
+  const projectsDispatch = useProjectsDispatch();
+  const deploysDispatch = useDeploysDispatch();
 
   const handleOpenProject = useCallback(
     async (projectId: number) => {
@@ -39,14 +32,16 @@ export function useProjectOpen({
       const response = await projectService.environmentVariables({ projectId });
 
       if (!response.success || !response.data) {
-        setDeployError(
-          response.error?.message ??
+        projectsDispatch({
+          type: 'panel-error-set',
+          message:
+            response.error?.message ??
             'No fue posible buscar los archivos Docker del proyecto.',
-        );
+        });
         return;
       }
 
-      setDeployError(null);
+      projectsDispatch({ type: 'panel-error-set', message: null });
 
       const repositories = allRepositories.filter((repository) =>
         project.repositories.some(
@@ -54,7 +49,7 @@ export function useProjectOpen({
         ),
       );
 
-      projectsDispatch({
+      deploysDispatch({
         type: 'deploy-paths-discovered',
         projectId,
         pathsByRepositoryId: getDockerFilePathsByRepositoryId(
@@ -68,7 +63,7 @@ export function useProjectOpen({
           response.data.dockerFilesPath,
         ),
       });
-      projectsDispatch({
+      deploysDispatch({
         type: 'deploy-env-discovered',
         projectId,
         envByRepositoryId: getEnvironmentVariablesByRepositoryId(
@@ -77,7 +72,7 @@ export function useProjectOpen({
           response.data.composeAnalyses,
         ),
       });
-      projectsDispatch({
+      deploysDispatch({
         type: 'deploy-ports-discovered',
         projectId,
         portsByRepositoryId: getComposePortsByRepositoryId(
@@ -87,8 +82,8 @@ export function useProjectOpen({
         ),
       });
     },
-    [allProjects, allRepositories, projectsDispatch],
+    [allProjects, allRepositories, deploysDispatch, projectsDispatch],
   );
 
-  return { deployError, handleOpenProject };
+  return { handleOpenProject };
 }

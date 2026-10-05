@@ -1,9 +1,3 @@
-import type { DeploymentResponse } from '@neoglito/web/shared/api/contracts';
-import type {
-  DeployComposePort,
-  DeployEnvVar,
-} from '@neoglito/web/features/projects/project.types';
-
 export type ProjectsPhase = 'list' | 'detail' | 'analyze';
 export type ProjectsDetailTab = 'deploy' | 'routes' | 'repos' | 'general';
 
@@ -11,25 +5,6 @@ export interface CreationProgress {
   done: number;
   total: number;
   label: string;
-}
-
-export type AnalyzeRepoStatus = 'pending' | 'succeeded' | 'failed';
-
-export interface AnalyzeRepoState {
-  repositoryId: number;
-  status: AnalyzeRepoStatus;
-  deployment: DeploymentResponse | null;
-  message: string | null;
-}
-
-export type AnalyzeTab = 'services' | 'relations';
-
-export interface AnalyzeState {
-  projectId: number;
-  repos: AnalyzeRepoState[];
-  collapsed: Record<number, boolean>;
-  selectedKey: string | null;
-  tab: AnalyzeTab;
 }
 
 export interface ProjectsState {
@@ -41,21 +16,17 @@ export interface ProjectsState {
   phase: ProjectsPhase;
   activeId: number | null;
   progress: CreationProgress | null;
-  openDeployKey: string | null;
-  deployPaths: Record<string, string>;
-  deployPathCandidates: Record<string, string[]>;
-  deployEnv: Record<string, DeployEnvVar[]>;
-  deployPorts: Record<string, DeployComposePort[]>;
   detailTab: ProjectsDetailTab;
   editName: string | null;
   editDescription: string | null;
   editSubmitting: boolean;
   editSaved: boolean;
   editMessage: string | null;
-  analyze: AnalyzeState | null;
+  panelError: string | null;
 }
 
 export type ProjectsAction =
+  | { type: 'panel-error-set'; message: string | null }
   | { type: 'creation-opened' }
   | { type: 'creation-cancelled' }
   | { type: 'name-changed'; name: string }
@@ -69,57 +40,14 @@ export type ProjectsAction =
   | { type: 'detail-opened'; id: number }
   | { type: 'detail-closed' }
   | { type: 'detail-tab-changed'; tab: ProjectsDetailTab }
-  | { type: 'deploy-row-toggled'; key: string }
-  | { type: 'deploy-path-changed'; key: string; path: string }
-  | { type: 'deploy-env-row-added'; key: string }
-  | { type: 'deploy-env-row-removed'; key: string; index: number }
-  | {
-      type: 'deploy-env-row-changed';
-      key: string;
-      index: number;
-      field: 'key' | 'value';
-      value: string;
-    }
-  | {
-      type: 'deploy-env-discovered';
-      projectId: number;
-      envByRepositoryId: Record<number, DeployEnvVar[]>;
-    }
-  | {
-      type: 'deploy-ports-discovered';
-      projectId: number;
-      portsByRepositoryId: Record<number, DeployComposePort[]>;
-    }
-  | {
-      type: 'deploy-port-changed';
-      key: string;
-      dockerComposePath: string;
-      index: number;
-      publishedPort: string;
-    }
-  | {
-      type: 'deploy-paths-discovered';
-      projectId: number;
-      pathsByRepositoryId: Record<number, string>;
-      candidatesByRepositoryId: Record<number, string[]>;
-    }
   | { type: 'edit-name-changed'; name: string }
   | { type: 'edit-description-changed'; description: string }
   | { type: 'edit-reset' }
   | { type: 'edit-submitting' }
   | { type: 'edit-succeeded' }
   | { type: 'edit-failed'; message: string }
-  | { type: 'analyze-opened'; projectId: number; repositoryIds: number[] }
-  | { type: 'analyze-closed' }
-  | {
-      type: 'analyze-repo-succeeded';
-      repositoryId: number;
-      deployment: DeploymentResponse;
-    }
-  | { type: 'analyze-repo-failed'; repositoryId: number; message: string }
-  | { type: 'analyze-group-toggled'; repositoryId: number }
-  | { type: 'analyze-service-selected'; key: string }
-  | { type: 'analyze-tab-changed'; tab: AnalyzeTab };
+  | { type: 'analyze-phase-entered' }
+  | { type: 'analyze-phase-left' };
 
 export const initialProjectsState: ProjectsState = {
   creating: false,
@@ -130,18 +58,13 @@ export const initialProjectsState: ProjectsState = {
   phase: 'list',
   activeId: null,
   progress: null,
-  openDeployKey: null,
-  deployPaths: {},
-  deployPathCandidates: {},
-  deployEnv: {},
-  deployPorts: {},
   detailTab: 'deploy',
   editName: null,
   editDescription: null,
   editSubmitting: false,
   editSaved: false,
   editMessage: null,
-  analyze: null,
+  panelError: null,
 };
 
 export function projectsReducer(
@@ -149,6 +72,8 @@ export function projectsReducer(
   action: ProjectsAction,
 ): ProjectsState {
   switch (action.type) {
+    case 'panel-error-set':
+      return { ...state, panelError: action.message };
     case 'creation-opened':
       return { ...state, creating: true };
     case 'creation-cancelled':
@@ -200,7 +125,6 @@ export function projectsReducer(
         phase: 'detail',
         activeId: action.id,
         openId: null,
-        openDeployKey: null,
         detailTab: 'deploy',
         editName: null,
         editDescription: null,
@@ -212,7 +136,6 @@ export function projectsReducer(
         ...state,
         phase: 'list',
         activeId: null,
-        openDeployKey: null,
         detailTab: 'deploy',
         editName: null,
         editDescription: null,
@@ -226,111 +149,6 @@ export function projectsReducer(
         editSaved: false,
         editMessage: null,
       };
-    case 'deploy-row-toggled':
-      return { ...state, openDeployKey: action.key };
-    case 'deploy-path-changed':
-      return {
-        ...state,
-        deployPaths: { ...state.deployPaths, [action.key]: action.path },
-      };
-    case 'deploy-paths-discovered': {
-      const deployPaths = { ...state.deployPaths };
-      const deployPathCandidates = { ...state.deployPathCandidates };
-
-      for (const [repositoryId, path] of Object.entries(
-        action.pathsByRepositoryId,
-      )) {
-        deployPaths[`${action.projectId}:${repositoryId}`] = path;
-      }
-
-      for (const [repositoryId, candidates] of Object.entries(
-        action.candidatesByRepositoryId,
-      )) {
-        deployPathCandidates[`${action.projectId}:${repositoryId}`] =
-          candidates;
-      }
-
-      return {
-        ...state,
-        deployPaths,
-        deployPathCandidates,
-      };
-    }
-    case 'deploy-env-row-added': {
-      const rows = state.deployEnv[action.key] ?? [];
-
-      return {
-        ...state,
-        deployEnv: {
-          ...state.deployEnv,
-          [action.key]: [...rows, { key: '', value: '', required: false }],
-        },
-      };
-    }
-    case 'deploy-env-row-removed': {
-      const rows = state.deployEnv[action.key] ?? [];
-
-      return {
-        ...state,
-        deployEnv: {
-          ...state.deployEnv,
-          [action.key]: rows.filter((_, index) => index !== action.index),
-        },
-      };
-    }
-    case 'deploy-env-row-changed': {
-      const rows = state.deployEnv[action.key] ?? [];
-
-      return {
-        ...state,
-        deployEnv: {
-          ...state.deployEnv,
-          [action.key]: rows.map((row, index) =>
-            index === action.index
-              ? { ...row, [action.field]: action.value }
-              : row,
-          ),
-        },
-      };
-    }
-    case 'deploy-env-discovered': {
-      const deployEnv = { ...state.deployEnv };
-
-      for (const [repositoryId, env] of Object.entries(
-        action.envByRepositoryId,
-      )) {
-        deployEnv[`${action.projectId}:${repositoryId}`] = env;
-      }
-
-      return { ...state, deployEnv };
-    }
-    case 'deploy-ports-discovered': {
-      const deployPorts = { ...state.deployPorts };
-
-      for (const [repositoryId, ports] of Object.entries(
-        action.portsByRepositoryId,
-      )) {
-        deployPorts[`${action.projectId}:${repositoryId}`] = ports;
-      }
-
-      return { ...state, deployPorts };
-    }
-    case 'deploy-port-changed': {
-      const ports = state.deployPorts[action.key] ?? [];
-
-      return {
-        ...state,
-        deployPorts: {
-          ...state.deployPorts,
-          [action.key]: ports.map((port, index) =>
-            port.dockerComposePath === action.dockerComposePath &&
-            index === action.index
-              ? { ...port, publishedPort: action.publishedPort || null }
-              : port,
-          ),
-        },
-      };
-    }
     case 'edit-name-changed':
       return { ...state, editName: action.name, editSaved: false };
     case 'edit-description-changed':
@@ -360,100 +178,9 @@ export function projectsReducer(
       };
     case 'edit-failed':
       return { ...state, editSubmitting: false, editMessage: action.message };
-    case 'analyze-opened':
-      return {
-        ...state,
-        phase: 'analyze',
-        analyze: {
-          projectId: action.projectId,
-          repos: action.repositoryIds.map((repositoryId) => ({
-            repositoryId,
-            status: 'pending',
-            deployment: null,
-            message: null,
-          })),
-          collapsed: {},
-          selectedKey: null,
-          tab: 'services',
-        },
-      };
-    case 'analyze-closed':
-      return {
-        ...state,
-        phase: 'detail',
-        analyze: null,
-        detailTab: 'deploy',
-      };
-    case 'analyze-repo-succeeded': {
-      if (!state.analyze) return state;
-
-      return {
-        ...state,
-        analyze: {
-          ...state.analyze,
-          repos: state.analyze.repos.map((repo) =>
-            repo.repositoryId === action.repositoryId
-              ? {
-                  ...repo,
-                  status: 'succeeded',
-                  deployment: action.deployment,
-                  message: null,
-                }
-              : repo,
-          ),
-        },
-      };
-    }
-    case 'analyze-repo-failed': {
-      if (!state.analyze) return state;
-
-      return {
-        ...state,
-        analyze: {
-          ...state.analyze,
-          repos: state.analyze.repos.map((repo) =>
-            repo.repositoryId === action.repositoryId
-              ? {
-                  ...repo,
-                  status: 'failed',
-                  deployment: null,
-                  message: action.message,
-                }
-              : repo,
-          ),
-        },
-      };
-    }
-    case 'analyze-group-toggled': {
-      if (!state.analyze) return state;
-
-      return {
-        ...state,
-        analyze: {
-          ...state.analyze,
-          collapsed: {
-            ...state.analyze.collapsed,
-            [action.repositoryId]:
-              !state.analyze.collapsed[action.repositoryId],
-          },
-        },
-      };
-    }
-    case 'analyze-service-selected': {
-      if (!state.analyze) return state;
-
-      return {
-        ...state,
-        analyze: { ...state.analyze, selectedKey: action.key },
-      };
-    }
-    case 'analyze-tab-changed': {
-      if (!state.analyze) return state;
-
-      return {
-        ...state,
-        analyze: { ...state.analyze, tab: action.tab },
-      };
-    }
+    case 'analyze-phase-entered':
+      return { ...state, phase: 'analyze' };
+    case 'analyze-phase-left':
+      return { ...state, phase: 'detail', detailTab: 'deploy' };
   }
 }

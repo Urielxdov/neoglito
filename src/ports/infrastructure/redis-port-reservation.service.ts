@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common'
+import type { PortReservationsResponse } from '@neoglito/shared/ports'
 import { createServer } from 'node:net'
 import type { Server } from 'node:net'
 import type {
   HeldPortReservation,
   PortReservationPort,
-} from '../../../ports/application/port-reservation.port.js'
-import { RedisConnection } from '../../../shared/infrastructure/cache/redis-connection.service.js'
+} from '../application/port-reservation.port.js'
+import { RedisConnection } from '../../shared/infrastructure/cache/redis-connection.service.js'
 
 const RESERVE_SCRIPT = `
   local portOwner = redis.call('GET', KEYS[1])
@@ -18,6 +19,10 @@ const RESERVE_SCRIPT = `
   end
   redis.call('SET', KEYS[1], ARGV[1])
   redis.call('SET', KEYS[2], ARGV[2])
+  if ARGV[3] then
+    redis.call('EXPIRE', KEYS[1], ARGV[3])
+    redis.call('EXPIRE', KEYS[2], ARGV[3])
+  end
   return 1
 `
 
@@ -55,8 +60,8 @@ export class RedisPortReservationService implements PortReservationPort {
   private readonly heldPorts = new Map<string, HeldPort>()
   constructor(private readonly redis: RedisConnection) {}
 
-  async getAll(): Promise<Record<string, string>> {
-    const reservations: Record<string, string> = {}
+  async getAll(): Promise<PortReservationsResponse> {
+    const reservations: PortReservationsResponse = {}
 
     for await (const ownerKeys of this.redis.client.scanIterator({
       MATCH: 'port-reservation:owner:*',
@@ -75,7 +80,11 @@ export class RedisPortReservationService implements PortReservationPort {
     return reservations
   }
 
-  async reservePort(port: number, ownerId: string): Promise<boolean> {
+  async reservePort(
+    port: number,
+    ownerId: string,
+    ttlSeconds?: number,
+  ): Promise<boolean> {
     if (!Number.isInteger(port) || port < 1 || port > 65535 || !ownerId) {
       this.logger.error(
         `Failed to reserve port ${port} for owner ${ownerId}: invalid port or ownerId`,
@@ -106,7 +115,11 @@ export class RedisPortReservationService implements PortReservationPort {
 
     const result = await this.redis.client.eval(RESERVE_SCRIPT, {
       keys: [portKey, ownerKey],
-      arguments: [ownerId, String(port)],
+      arguments: [
+        ownerId,
+        String(port),
+        ...(ttlSeconds ? [String(Math.ceil(ttlSeconds))] : []),
+      ],
     })
 
     if (result !== 1) {

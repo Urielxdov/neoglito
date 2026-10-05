@@ -3,6 +3,7 @@ import { AuthModule } from '../auth/auth.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { RepositoryModule } from '../repository/repository.module.js';
 import { ContainerModule } from '../container/container.module.js';
+import { PortModule } from '../ports/port.module.js';
 import { FILE_FINDER_PORT } from '../shared/application/file-finder.port.js';
 import { ENVIROMENT_VARIABLE_EXTRACT_PORT } from '../shared/application/enviroment-variable-extract.port.js';
 import { ExtractEnvironmentVariablesUseCase } from '../shared/application/extract-environment-variables.use-case.js';
@@ -23,7 +24,7 @@ import {
 } from './presentation/deployment.controller.js';
 
 @Module({
-  imports: [AuthModule, PrismaModule, RepositoryModule, ContainerModule],
+  imports: [AuthModule, PrismaModule, RepositoryModule, ContainerModule, PortModule],
   controllers: [DeploymentController, ProjectDeploymentController],
   providers: [
     CloneProjectRepositoriesUseCase,

@@ -17,7 +17,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5174}
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3000}
       GITHUB_CALLBACK_URL: ${GITHUB_CALLBACK_URL:-http://localhost:3000/auth/github/callback}
       NODE_TLS_REJECT_UNAUTHORIZED: ${NODE_TLS_REJECT_UNAUTHORIZED:-1}
@@ -63,7 +63,7 @@ services:
     image: node:22-alpine
     working_dir: /app
     ports:
-      - "5173:5173"
+      - "5174:5174"
     volumes:
       - .:/app
       - /app/node_modules

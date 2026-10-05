@@ -25,7 +25,7 @@ async function bootstrap() {
   app.useGlobalFilters(new ApiExceptionFilter());
   app.useGlobalInterceptors(new ApiResponseInterceptor());
   app.enableCors({
-    origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+    origin: process.env.FRONTEND_URL ?? 'http://localhost:5174',
     credentials: true,
   });
 

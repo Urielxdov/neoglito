@@ -1,24 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { readFile } from 'node:fs/promises';
 import { parse } from 'yaml';
+import type {
+  ComposePort,
+  ComposePortAnalysis,
+  ComposePortExtractPort,
+} from '../../application/compose-port-extract.port.js';
 
 type YamlRecord = Record<string, unknown>;
 
-export interface ComposePort {
-  service: string;
-  hostIp: string | null;
-  publishedPort: string | null;
-  targetPort: string;
-  protocol: string;
-  mappingType: 'one-to-one' | 'range';
-}
-
-export interface ComposePortAnalysis {
-  ports: ComposePort[];
-}
-
 @Injectable()
-export class YamlComposePortExtractService {
+export class YamlComposePortExtractService implements ComposePortExtractPort {
   async analyze(filePath: string): Promise<ComposePortAnalysis> {
     const fileContent = await readFile(filePath, 'utf8');
     const composeFile = parse(fileContent) as unknown;

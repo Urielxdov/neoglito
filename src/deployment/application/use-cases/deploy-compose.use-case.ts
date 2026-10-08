@@ -24,8 +24,7 @@ import type {
   HeldPortReservation,
   PortReservationPort,
 } from '../../../ports/application/port-reservation.port.js';
-import { CloneProjectRepositoriesUseCase } from './clone-project-repositories.use-case.js';
-import { InitDeployProjectUseCase } from './init-deploy-project.use-case.js';
+import { ProjectAnalysisService } from '../../../analisys/application/project-analysis.service.js';
 
 interface DeploymentRecord {
   id: string;
@@ -76,8 +75,7 @@ export class DeployComposeUseCase {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly cloneRepositories: CloneProjectRepositoriesUseCase,
-    private readonly findComposeFiles: InitDeployProjectUseCase,
+    private readonly projectAnalysis: ProjectAnalysisService,
     @Inject(CONTAINER_RUNTIME_PORT)
     private readonly runtime: ContainerRuntimePort,
     @Inject(PORT_RESERVATION_PORT)
@@ -85,10 +83,8 @@ export class DeployComposeUseCase {
   ) {}
 
   async execute(userId: number, projectId: number, composePath: string) {
-    const roots = await this.cloneRepositories.execute(userId, projectId);
-    const candidates = (
-      await Promise.all(roots.map((root) => this.findComposeFiles.execute(root)))
-    ).flat();
+    const { dockerFilesPath: candidates } =
+      await this.projectAnalysis.getComposeFiles(userId, projectId);
     const composeFile = candidates.find((candidate) =>
       this.samePath(candidate, composePath),
     );

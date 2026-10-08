@@ -20,8 +20,7 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/infrastructure/passport/jwt-auth.guard.js';
-import { ExtractEnvironmentVariablesUseCase } from '../../shared/application/extract-environment-variables.use-case.js';
-import { YamlComposePortExtractService } from '../../shared/infrastructure/compose/yaml-compose-port-extract.service.js';
+import { ProjectAnalysisService } from '../../analisys/application/project-analysis.service.js';
 import type { AuthenticatedRequest } from '../../shared/presentation/http/authenticated-request.js';
 import type {
   DeploymentResponse,
@@ -43,14 +42,11 @@ import {
 import { DeployComposeDto } from '../application/dto/deploy-compose.dto.js';
 import { InitProjectDto } from '../application/dto/init-project.dto.js';
 import { ProjectComposeFilesDto } from '../application/dto/project-compose-files.dto.js';
-import { CloneProjectRepositoriesUseCase } from '../application/use-cases/clone-project-repositories.use-case.js';
-import { InitDeployProjectUseCase } from '../application/use-cases/init-deploy-project.use-case.js';
 import {
   DeployComposeUseCase,
   GetProjectDeploymentsUseCase,
   StopDeploymentUseCase,
 } from '../application/use-cases/deploy-compose.use-case.js';
-import { GetProjectComposeFilesUseCase } from '../application/use-cases/get-project-compose-files.use-case.js';
 
 @ApiTags('Deployment')
 @Controller('deployment')
@@ -59,9 +55,7 @@ import { GetProjectComposeFilesUseCase } from '../application/use-cases/get-proj
 @ApiUnauthorizedResponse({ description: 'No autorizado' })
 export class DeploymentController {
   constructor(
-    private readonly getComposeFiles: GetProjectComposeFilesUseCase,
-    private readonly extractEnvironmentVariables: ExtractEnvironmentVariablesUseCase,
-    private readonly extractComposePorts: YamlComposePortExtractService,
+    private readonly projectAnalysis: ProjectAnalysisService,
     private readonly deployCompose: DeployComposeUseCase,
     private readonly getDeployments: GetProjectDeploymentsUseCase,
     private readonly stopDeployment: StopDeploymentUseCase,
@@ -90,26 +84,10 @@ export class DeploymentController {
     @Req() request: AuthenticatedRequest,
     @Body() dto: ProjectComposeFilesDto,
   ): Promise<ProjectDockerFilesResponse> {
-    const result = await this.getComposeFiles.execute(
+    return this.projectAnalysis.analyzeProject(
       request.user.id,
       dto.projectId,
     );
-    const composeAnalyses = await Promise.all(
-      result.dockerFilesPath.map(async (dockerComposePath) => {
-        const [environmentAnalysis, portAnalysis] = await Promise.all([
-          this.extractEnvironmentVariables.execute([dockerComposePath]),
-          this.extractComposePorts.analyze(dockerComposePath),
-        ]);
-
-        return {
-          dockerComposePath,
-          environmentVariables:
-            environmentAnalysis[0]?.environmentVariables ?? [],
-          ports: portAnalysis.ports,
-        };
-      }),
-    );
-    return { ...result, composeAnalyses };
   }
 
   @Post()
@@ -193,9 +171,7 @@ export class DeploymentController {
 @ApiUnauthorizedResponse({ description: 'No autorizado' })
 export class ProjectDeploymentController {
   constructor(
-    private readonly cloneProjectRepositories: CloneProjectRepositoriesUseCase,
-    private readonly findComposeFiles: InitDeployProjectUseCase,
-    private readonly extractEnvironmentVariables: ExtractEnvironmentVariablesUseCase,
+    private readonly projectAnalysis: ProjectAnalysisService,
   ) {}
 
   @Post('init')
@@ -211,24 +187,21 @@ export class ProjectDeploymentController {
     @Req() request: AuthenticatedRequest,
     @Body() dto: InitProjectDto,
   ): Promise<InitProjectResponse> {
-    const clonedRepositoryPaths = await this.cloneProjectRepositories.execute(
+    const result = await this.projectAnalysis.analyzeProject(
       request.user.id,
       dto.projectId,
+      { includePorts: false },
     );
-    const dockerComposePaths = (
-      await Promise.all(
-        clonedRepositoryPaths.map((repositoryPath) =>
-          this.findComposeFiles.execute(repositoryPath),
-        ),
-      )
-    ).flat();
-    const composeAnalyses = (
-      await this.extractEnvironmentVariables.execute(dockerComposePaths)
-    ).map((analysis) => ({
-      dockerComposePath: analysis.filePath,
-      environmentVariables: analysis.environmentVariables,
-    }));
 
-    return { clonedRepositoryPaths, dockerComposePaths, composeAnalyses };
+    return {
+      clonedRepositoryPaths: result.clonedRepositoryPaths,
+      dockerComposePaths: result.dockerFilesPath,
+      composeAnalyses: result.composeAnalyses.map(
+        ({ dockerComposePath, environmentVariables }) => ({
+          dockerComposePath,
+          environmentVariables,
+        }),
+      ),
+    };
   }
 }

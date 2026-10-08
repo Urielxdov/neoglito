@@ -86,19 +86,21 @@ export async function identifyPort(
 }
 
 // ── 3. Un contenedor: todos sus puertos → ProbeOutcome ────────
+function deriveOutcome(ports: readonly PortResult[]): ProbeOutcome {
+  if (ports.every((r) => r.status === 'closed')) return { kind: 'no_listeners' }
+
+  const protocols = [...new Set(ports.flatMap((r) => (r.status === 'identified' ? [r.protocol] : [])))]
+
+  return protocols.length === 0
+    ? { kind: 'unidentified' }
+    : { kind: 'identified', protocols }
+}
+
 export async function probeContainer(
   ctx: ContainerContext,
   allowed: readonly Protocol[],
 ): Promise<{ outcome: ProbeOutcome; ports: PortResult[] }> {
-  if (ctx.ports.length === 0) return { outcome: { kind: 'no_listeners' }, ports: [] }
-
   const ports = await Promise.all(ctx.ports.map((port) => identifyPort(ctx.host, port, allowed)))
-  const protocols = [...new Set(ports.flatMap((r) => (r.status === 'identified' ? [r.protocol] : [])))]
 
-  let outcome: ProbeOutcome
-  if (ports.every((r) => r.status === 'closed')) outcome = { kind: 'no_listeners' }
-  else if (protocols.length === 0) outcome = { kind: 'unidentified' }
-  else outcome = { kind: 'identified', protocols }
-
-  return { outcome, ports }
+  return { outcome: deriveOutcome(ports), ports }
 }

@@ -282,6 +282,24 @@ export class DeploymentServiceSchema {
   health!: string;
 
   @ApiProperty({
+    enum: [
+      'BACKEND',
+      'FRONTEND',
+      'DATABASE',
+      'CACHE',
+      'MESSAGE_BROKER',
+      'WORKER',
+      'SCHEDULER',
+      'REVERSE_PROXY',
+      'UNKNOWN',
+    ],
+    example: 'DATABASE',
+    description:
+      'Categoría identificada a partir del protocolo que responde en el puerto',
+  })
+  serviceType!: string;
+
+  @ApiProperty({
     type: String,
     format: 'date-time',
     example: '2026-09-26T12:00:00.000Z',

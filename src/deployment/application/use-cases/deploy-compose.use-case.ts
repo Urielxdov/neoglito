@@ -16,6 +16,7 @@ import type {
 } from '../../../container/domain/entities/container.entity.js';
 import { Deployment } from '../../domain/entities/deployment.entity.js';
 import type { DeploymentStatus } from '../../domain/entities/deployment.entity.js';
+import type { ServiceType } from '../../domain/value-objects/service-type.js';
 import { CONTAINER_RUNTIME_PORT } from '../../../container/application/container-runtime.port.js';
 import type { ContainerRuntimePort } from '../../../container/application/container-runtime.port.js';
 import { draftPortOwnerId } from '../../../ports/application/draft-port-owner.js';
@@ -40,12 +41,13 @@ interface DeploymentRecord {
     port: number;
     status: ContainerStatus;
     health: ContainerHealth;
+    serviceType: ServiceType;
     lastObservedAt: Date;
     deploymentId: string;
   }>;
 }
 
-function toDeployment(record: DeploymentRecord): Deployment {
+export function toDeployment(record: DeploymentRecord): Deployment {
   return new Deployment(
     record.id,
     record.projectId,
@@ -62,6 +64,7 @@ function toDeployment(record: DeploymentRecord): Deployment {
           service.port,
           service.status,
           service.health,
+          service.serviceType,
           service.lastObservedAt,
           service.deploymentId,
         ),

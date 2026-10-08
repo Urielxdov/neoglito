@@ -21,12 +21,17 @@ services:
       BACKEND_URL: ${BACKEND_URL:-http://localhost:3000}
       GITHUB_CALLBACK_URL: ${GITHUB_CALLBACK_URL:-http://localhost:3000/auth/github/callback}
       NODE_TLS_REJECT_UNAUTHORIZED: ${NODE_TLS_REJECT_UNAUTHORIZED:-1}
+      # Host desde el que la API alcanza los puertos publicados por los despliegues
+      CONTAINER_PROBE_HOST: ${CONTAINER_PROBE_HOST:-host.docker.internal}
       # URL para conectarnos a PostgreSQL
       # postgres:postgres → usuario:contraseña
       # @postgres → nombre del servicio de PostgreSQL
       # 5432 → puerto de PostgreSQL
       # repository_analyzer → nombre de la base de datos
-      
+
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Necesario en Linux; Docker Desktop ya lo resuelve
 
     depends_on:
       postgres: # Si este no esta levantado nosotros no levantamos el api
@@ -34,7 +39,8 @@ services:
       redis:
         condition: service_healthy
     command: >
-      sh -c "npx prisma generate &&
+      sh -c "npm ci --include=dev &&
+             npx prisma generate &&
              npx prisma db push &&
              npm run start:dev"
 
@@ -69,8 +75,8 @@ services:
       - /app/node_modules
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
-    command: 
-      sh -c "npm install &&
+    command: >
+      sh -c "npm ci --include=dev &&
              npm --workspace @neoglito/web run dev -- --host 0.0.0.0"
   redis:
     image: redis:8-alpine

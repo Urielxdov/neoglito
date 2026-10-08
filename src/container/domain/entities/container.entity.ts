@@ -1,3 +1,5 @@
+import type { ServiceType } from '../../../deployment/domain/value-objects/service-type.js';
+
 export type ContainerStatus =
   | 'created'
   | 'running'
@@ -15,6 +17,7 @@ export class Container {
     public readonly port: number,
     public readonly status: ContainerStatus,
     public readonly health: ContainerHealth,
+    public readonly serviceType: ServiceType,
     public readonly lastObservedAt: Date,
     public readonly deploymentId: string,
   ) {}

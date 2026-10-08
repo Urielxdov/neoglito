@@ -12,6 +12,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiConflictResponse,
   ApiNotFoundResponse,
   ApiOperation,
   ApiParam,
@@ -47,6 +48,7 @@ import {
   GetProjectDeploymentsUseCase,
   StopDeploymentUseCase,
 } from '../application/use-cases/deploy-compose.use-case.js';
+import { ClassifyDeploymentServicesUseCase } from '../application/use-cases/classify-deployment-services.use-case.js';
 
 @ApiTags('Deployment')
 @Controller('deployment')
@@ -59,6 +61,7 @@ export class DeploymentController {
     private readonly deployCompose: DeployComposeUseCase,
     private readonly getDeployments: GetProjectDeploymentsUseCase,
     private readonly stopDeployment: StopDeploymentUseCase,
+    private readonly classifyServices: ClassifyDeploymentServicesUseCase,
   ) {}
 
   @Post('docker_files')
@@ -161,6 +164,34 @@ export class DeploymentController {
     @Param('deploymentId') deploymentId: string,
   ): Promise<DeploymentResponse> {
     return toDeploymentResponse(await this.stopDeployment.execute(deploymentId));
+  }
+
+  @Post(':deploymentId/classify')
+  @ApiOperation({
+    summary: 'Identificar la categoría de los contenedores',
+    description:
+      'Sondea el puerto publicado de cada contenedor del despliegue para identificar su protocolo y guarda la categoría (ServiceType). Todos los contenedores deben estar en running y tener un puerto asignado.',
+  })
+  @ApiParam({
+    name: 'deploymentId',
+    format: 'uuid',
+    example: '0dc6bf1b-0041-4f56-9d2e-8fe08d8c00e1',
+  })
+  @ApiNotFoundResponse({ description: 'El despliegue no existe' })
+  @ApiConflictResponse({
+    description:
+      'Algún contenedor no está en running o no tiene un puerto asignado',
+  })
+  @ApiSuccessResponseDoc({
+    status: 201,
+    description: 'Contenedores clasificados',
+    dataSchema: { $ref: getSchemaPath(DeploymentSchema) },
+    extraModels: [DeploymentSchema, DeploymentServiceSchema],
+  })
+  async classify(
+    @Param('deploymentId') deploymentId: string,
+  ): Promise<DeploymentResponse> {
+    return toDeploymentResponse(await this.classifyServices.execute(deploymentId));
   }
 }
 

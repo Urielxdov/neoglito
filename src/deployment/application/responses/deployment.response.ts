@@ -17,6 +17,7 @@ export function toDeploymentResponse(deployment: Deployment): DeploymentResponse
       port: service.port,
       status: service.status,
       health: service.health,
+      serviceType: service.serviceType,
       lastObservedAt: service.lastObservedAt.toISOString(),
       deploymentId: service.deploymentId,
     })),

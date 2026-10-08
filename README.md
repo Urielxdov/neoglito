@@ -119,7 +119,13 @@ Esto levanta:
 - Frontend React/Vite en `http://localhost:5174`
 - PostgreSQL en `localhost:5432`
 
-El servicio de API ejecuta Prisma y arranca el backend en modo desarrollo. El frontend se inicia con Vite y queda disponible desde el navegador.
+El servicio de API sincroniza sus dependencias con `package-lock.json` mediante `npm ci`, genera el cliente de Prisma y arranca el backend en modo desarrollo. El frontend tambien ejecuta `npm ci` antes de iniciar Vite. Esto mantiene actualizados los volumenes de `node_modules` de ambos contenedores y limpia los restos de instalaciones anteriores.
+
+Si cambias las dependencias mientras los servicios estan corriendo, reinicialos para instalarlas:
+
+```bash
+docker compose restart api frontend
+```
 
 ## Scripts Disponibles
 

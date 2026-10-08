@@ -1,12 +1,17 @@
-import { GitBranch, Moon, Sun } from 'lucide'
+import { useRef } from 'react'
+import { Moon, Sun } from 'lucide'
 import { Outlet, useLocation } from 'react-router-dom'
 import { AppIcon } from '@neoglito/web/shared/components/app-icon'
 import { useTheme } from '@neoglito/web/shared/hooks/use-theme'
+import { NeoglitoLogo } from '@neoglito/web/shared/branding/neoglito-logo'
+import { useNeoglitoSplash } from '@neoglito/web/shared/branding/use-neoglito-splash'
 
 export function AppLayout() {
   const { isDark, toggleTheme } = useTheme()
   const { pathname } = useLocation()
   const pageTitle = pathname === '/authentication' ? 'Conectar cuenta' : 'Repositorios y proyectos'
+  const logoRef = useRef<HTMLSpanElement>(null)
+  const logoDocked = useNeoglitoSplash(logoRef, isDark)
 
   return (
     <div
@@ -15,10 +20,10 @@ export function AppLayout() {
     >
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#e6eaf0] bg-white px-5 dark:border-[#253044] dark:bg-[#111826] sm:px-7">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#eef3fc] text-[#2257c4] dark:bg-[#18243a] dark:text-[#7aa4ff]">
-            <AppIcon icon={GitBranch} size={17} />
-          </span>
-          <span className="text-sm font-semibold">Neoglito</span>
+          <NeoglitoLogo
+            ref={logoRef}
+            className={`shrink-0 text-[24px] ${logoDocked ? '' : 'invisible'}`}
+          />
           <span className="hidden text-sm text-[#8c98ac] dark:text-[#7a8699] sm:inline">/</span>
           <span className="truncate text-sm text-[#51607a] dark:text-[#a7b4c8]">{pageTitle}</span>
         </div>

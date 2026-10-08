@@ -9,6 +9,7 @@ import {
   GetProjectDeploymentsUseCase,
   StopDeploymentUseCase,
 } from './application/use-cases/deploy-compose.use-case.js';
+import { ClassifyDeploymentServicesUseCase } from './application/use-cases/classify-deployment-services.use-case.js';
 import {
   DeploymentController,
   ProjectDeploymentController,
@@ -21,6 +22,7 @@ import {
     DeployComposeUseCase,
     GetProjectDeploymentsUseCase,
     StopDeploymentUseCase,
+    ClassifyDeploymentServicesUseCase,
   ],
 })
 export class DeploymentModule {}

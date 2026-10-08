@@ -6,6 +6,7 @@ export interface DeploymentServiceResponse {
   port: number
   status: string
   health: string
+  serviceType: string
   lastObservedAt: IsoDateString
   deploymentId: string
 }

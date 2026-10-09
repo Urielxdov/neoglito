@@ -111,9 +111,16 @@ export function getEnvironmentVariablesByRepositoryId(
       )
       .flatMap((analysis) =>
         analysis.environmentVariables.map((variable) => ({
+          service: variable.service,
+          dockerComposePath: analysis.dockerComposePath,
           key: variable.name,
-          value: variable.value ?? variable.defaultValue ?? '',
-          required: variable.value === null && variable.defaultValue === null,
+          value:
+            variable.source === 'literal'
+              ? (variable.value ?? '')
+              : (variable.defaultValue ?? ''),
+          required:
+            variable.source === 'interpolation' &&
+            variable.defaultValue === null,
         })),
       );
 

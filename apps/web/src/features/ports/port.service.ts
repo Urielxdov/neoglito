@@ -1,25 +1,39 @@
-import { apiClient } from "@neoglito/web/shared/api/client"
+import { apiClient } from '@neoglito/web/shared/api/client';
 import type {
   ApiResponse,
   PortReservationsResponse,
   ReservePortRequest,
-} from "@neoglito/web/shared/api/contracts"
+} from '@neoglito/web/shared/api/contracts';
 
 export const portService = {
   /** Obtiene las reservas de puertos, asociando la clave del propietario con la del puerto. */
   getAll(): Promise<ApiResponse<PortReservationsResponse>> {
-    return apiClient.get<PortReservationsResponse>('/port')
+    return apiClient.get<PortReservationsResponse>('/port');
   },
 
   /** Reserva provisionalmente un puerto individual; expira solo en el servidor. */
   reserve(
     request: ReservePortRequest,
   ): Promise<ApiResponse<{ port: number; ownerId: string }>> {
-    return apiClient.post<{ port: number; ownerId: string }>('/port', request)
+    console.log('[ports:http] POST /port', {
+      projectId: request.projectId,
+      port: request.port,
+    });
+    return apiClient.post<{ port: number; ownerId: string }>('/port', request);
   },
 
   /** Libera una reserva provisional hecha con `reserve`. */
-  release(projectId: number, port: number): Promise<ApiResponse<{ released: boolean }>> {
-    return apiClient.delete<{ released: boolean }>(`/port/${projectId}/${port}`)
+  release(
+    projectId: number,
+    port: number,
+  ): Promise<ApiResponse<{ released: boolean }>> {
+    console.log('[ports:http] DELETE reserva provisional', {
+      path: `/port/${projectId}/${port}`,
+      projectId,
+      port,
+    });
+    return apiClient.delete<{ released: boolean }>(
+      `/port/${projectId}/${port}`,
+    );
   },
-}
+};

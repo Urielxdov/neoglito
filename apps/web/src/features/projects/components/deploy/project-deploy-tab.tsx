@@ -1,4 +1,11 @@
 import type { Project } from '@neoglito/web/features/projects/project.model';
+import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  assignedDeploymentPort,
+  deploymentPortsQueryKey,
+  loadProjectDeploymentPorts,
+} from '@neoglito/web/features/projects/deployment-assigned-ports';
 import type { ProjectDetailRepositoryInfo } from '@neoglito/web/features/projects/components/detail/project-detail-view';
 import { DeployFileList } from '@neoglito/web/features/projects/components/deploy/deploy-file-list';
 import { DeployFileDetail } from '@neoglito/web/features/projects/components/deploy/deploy-file-detail';
@@ -25,6 +32,12 @@ export function ProjectDeployTab({
     openDeployKey,
   } = useDeploysState();
   const dispatch = useDeploysDispatch();
+  const assignedPorts = useQuery({
+    queryKey: deploymentPortsQueryKey(project.id),
+    queryFn: () => loadProjectDeploymentPorts(project.id),
+    refetchOnMount: 'always',
+    retry: false,
+  });
 
   const selectedKey =
     openDeployKey ??
@@ -34,6 +47,42 @@ export function ProjectDeployTab({
         (repository) => `${project.id}:${repository.id}` === selectedKey,
       )
     : undefined;
+
+  useEffect(() => {
+    if (
+      !selectedKey ||
+      !assignedPorts.data ||
+      assignedPorts.isFetching ||
+      assignedPorts.isError
+    )
+      return;
+    const ports = deployPorts[selectedKey] ?? [];
+    ports.forEach((port, index) => {
+      const assigned = assignedDeploymentPort(
+        port,
+        ports,
+        deployPathCandidates[selectedKey] ?? [],
+        assignedPorts.data,
+      );
+      if (assigned !== null && port.publishedPort !== assigned) {
+        dispatch({
+          type: 'deploy-port-changed',
+          key: selectedKey,
+          index,
+          dockerComposePath: port.dockerComposePath,
+          publishedPort: assigned,
+        });
+      }
+    });
+  }, [
+    selectedKey,
+    assignedPorts.data,
+    assignedPorts.isFetching,
+    assignedPorts.isError,
+    deployPorts,
+    deployPathCandidates,
+    dispatch,
+  ]);
 
   if (!selectedKey) return null;
 
@@ -56,6 +105,15 @@ export function ProjectDeployTab({
 
         {selectedRepository && (
           <DeployFileDetail
+            key={selectedKey}
+            assignedDeployments={assignedPorts.data ?? []}
+            checkingDeploymentPorts={
+              assignedPorts.isPending || assignedPorts.isFetching
+            }
+            deploymentPortsError={assignedPorts.error?.message ?? null}
+            onRetryDeploymentPorts={() => {
+              void assignedPorts.refetch();
+            }}
             projectId={project.id}
             repositoryName={shortName(selectedRepository.name)}
             path={deployPaths[selectedKey] ?? ''}

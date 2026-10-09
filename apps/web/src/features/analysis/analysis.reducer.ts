@@ -28,6 +28,7 @@ export type AnalysisAction =
       type: 'analyze-repo-succeeded';
       repositoryId: number;
       deployment: DeploymentResponse;
+      message?: string | null;
     }
   | { type: 'analyze-repo-failed'; repositoryId: number; message: string }
   | { type: 'analyze-group-toggled'; repositoryId: number }
@@ -67,7 +68,7 @@ export function analysisReducer(
                 ...repo,
                 status: 'succeeded',
                 deployment: action.deployment,
-                message: null,
+                message: action.message ?? null,
               }
             : repo,
         ),

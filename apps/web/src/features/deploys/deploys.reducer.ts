@@ -1,6 +1,8 @@
 import type { ComposePort } from '@neoglito/web/shared/api/contracts';
 
 export interface DeployEnvVar {
+  service?: string;
+  dockerComposePath?: string;
   key: string;
   value: string;
   required: boolean;

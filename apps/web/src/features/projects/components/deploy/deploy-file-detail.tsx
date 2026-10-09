@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import type { DeploymentPortsResponse } from '@neoglito/web/shared/api/contracts';
+import { assignedDeploymentPort } from '@neoglito/web/features/projects/deployment-assigned-ports';
 import { X } from 'lucide';
 import type {
   DeployComposePort,
@@ -10,6 +12,10 @@ import { DeployPortField } from '@neoglito/web/features/projects/components/depl
 import { parseReservations } from '@neoglito/web/features/ports/port-reservations';
 
 interface DeployFileDetailProps {
+  assignedDeployments: DeploymentPortsResponse[];
+  checkingDeploymentPorts: boolean;
+  deploymentPortsError: string | null;
+  onRetryDeploymentPorts(): void;
   projectId: number;
   repositoryName: string;
   path: string;
@@ -28,6 +34,10 @@ interface DeployFileDetailProps {
 }
 
 export function DeployFileDetail({
+  assignedDeployments,
+  checkingDeploymentPorts,
+  deploymentPortsError,
+  onRetryDeploymentPorts,
   projectId,
   repositoryName,
   path,
@@ -91,6 +101,26 @@ export function DeployFileDetail({
       </div>
 
       <div className="flex flex-col gap-3">
+        {checkingDeploymentPorts && (
+          <span role="status" className="text-[12px] text-[#8c98ac]">
+            Consultando puertos del despliegue…
+          </span>
+        )}
+        {deploymentPortsError && (
+          <div
+            role="alert"
+            className="text-[12px] text-[#b42318] dark:text-[#f08a8a]"
+          >
+            {deploymentPortsError}{' '}
+            <button
+              type="button"
+              onClick={onRetryDeploymentPorts}
+              className="underline"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-2.5">
           <span className="text-[12px] font-bold uppercase tracking-[0.09em] text-[#51607a] dark:text-[#a7b4c8]">
             Puertos · {ports.length}
@@ -111,7 +141,8 @@ export function DeployFileDetail({
               >
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-mono text-[12px] font-semibold text-[#16202e] dark:text-[#e8edf6]">
-                    {port.service} · {port.targetPort}/{port.protocol}
+                    {port.service} · {port.publishedPort || port.targetPort}/
+                    {port.protocol}
                   </span>
                   <span className="mt-0.5 block text-[11.5px] text-[#8c98ac] dark:text-[#7a8699]">
                     {port.mappingType === 'range'
@@ -121,6 +152,15 @@ export function DeployFileDetail({
                   </span>
                 </span>
                 <DeployPortField
+                  assignedPort={assignedDeploymentPort(
+                    port,
+                    ports.map((entry) => entry.port),
+                    candidates,
+                    assignedDeployments,
+                  )}
+                  disabled={
+                    checkingDeploymentPorts || deploymentPortsError !== null
+                  }
                   projectId={projectId}
                   port={port}
                   reservations={reservations}
@@ -144,49 +184,60 @@ export function DeployFileDetail({
         </div>
 
         <div className="flex flex-col gap-2">
-          {env.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <input
-                  value={row.key}
-                  onChange={(event) =>
-                    onEnvChange(rowIndex, 'key', event.target.value)
-                  }
-                  placeholder="NOMBRE_VARIABLE"
-                  className="h-9 min-w-0 flex-1 rounded-lg border border-[#d6dce5] bg-white px-2.5 font-mono text-[12.5px] text-[#16202e] outline-none placeholder:text-[#a7b4c8] focus:border-[#2257c4] dark:border-[#35435a] dark:bg-[#0c121d] dark:text-[#e8edf6]"
-                />
-                <input
-                  value={row.value}
-                  onChange={(event) =>
-                    onEnvChange(rowIndex, 'value', event.target.value)
-                  }
-                  placeholder="valor"
-                  className="h-9 min-w-0 flex-1 rounded-lg border border-[#d6dce5] bg-white px-2.5 text-[12.5px] text-[#16202e] outline-none placeholder:text-[#a7b4c8] focus:border-[#2257c4] dark:border-[#35435a] dark:bg-[#0c121d] dark:text-[#e8edf6]"
-                />
-                <button
-                  type="button"
-                  onClick={() => onEnvRemove(rowIndex)}
-                  aria-label="Eliminar variable"
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#d6dce5] bg-white text-[#8c98ac] hover:bg-[#f1f5f9] dark:border-[#35435a] dark:bg-[#0c121d] dark:text-[#7a8699]"
+          {env
+            .map((row, rowIndex) => ({ row, rowIndex }))
+            .filter(
+              ({ row }) =>
+                !row.dockerComposePath ||
+                row.dockerComposePath.replace(/\\/g, '/') ===
+                  path.replace(/\\/g, '/'),
+            )
+            .map(({ row, rowIndex }) => (
+              <div key={rowIndex} className="flex flex-col gap-1">
+                <span className="text-[11.5px] text-[#8c98ac] dark:text-[#7a8699]">
+                  {row.service ?? 'Todos los servicios'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <input
+                    value={row.key}
+                    onChange={(event) =>
+                      onEnvChange(rowIndex, 'key', event.target.value)
+                    }
+                    placeholder="NOMBRE_VARIABLE"
+                    className="h-9 min-w-0 flex-1 rounded-lg border border-[#d6dce5] bg-white px-2.5 font-mono text-[12.5px] text-[#16202e] outline-none placeholder:text-[#a7b4c8] focus:border-[#2257c4] dark:border-[#35435a] dark:bg-[#0c121d] dark:text-[#e8edf6]"
+                  />
+                  <input
+                    value={row.value}
+                    onChange={(event) =>
+                      onEnvChange(rowIndex, 'value', event.target.value)
+                    }
+                    placeholder="valor"
+                    className="h-9 min-w-0 flex-1 rounded-lg border border-[#d6dce5] bg-white px-2.5 text-[12.5px] text-[#16202e] outline-none placeholder:text-[#a7b4c8] focus:border-[#2257c4] dark:border-[#35435a] dark:bg-[#0c121d] dark:text-[#e8edf6]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onEnvRemove(rowIndex)}
+                    aria-label="Eliminar variable"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#d6dce5] bg-white text-[#8c98ac] hover:bg-[#f1f5f9] dark:border-[#35435a] dark:bg-[#0c121d] dark:text-[#7a8699]"
+                  >
+                    <AppIcon icon={X} size={13} strokeWidth={2.2} />
+                  </button>
+                </div>
+                <span
+                  className={`text-[11.5px] ${
+                    row.required
+                      ? 'text-[#a4550a] dark:text-[#f0a458]'
+                      : 'text-[#8c98ac] dark:text-[#7a8699]'
+                  }`}
                 >
-                  <AppIcon icon={X} size={13} strokeWidth={2.2} />
-                </button>
+                  {row.required
+                    ? row.value.trim()
+                      ? 'Requerida'
+                      : 'Requerida · sin valor'
+                    : 'Opcional'}
+                </span>
               </div>
-              <span
-                className={`text-[11.5px] ${
-                  row.required
-                    ? 'text-[#a4550a] dark:text-[#f0a458]'
-                    : 'text-[#8c98ac] dark:text-[#7a8699]'
-                }`}
-              >
-                {row.required
-                  ? row.value.trim()
-                    ? 'Requerida'
-                    : 'Requerida · sin valor'
-                  : 'Opcional'}
-              </span>
-            </div>
-          ))}
+            ))}
         </div>
 
         <button

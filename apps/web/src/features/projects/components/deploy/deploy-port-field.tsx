@@ -37,6 +37,8 @@ function reservedMessage(check: Extract<PortCheck, { status: 'reserved' }>) {
 }
 
 interface DeployPortFieldProps {
+  assignedPort?: string | null;
+  disabled?: boolean;
   projectId: number;
   port: DeployComposePort;
   reservations: PortReservation[];
@@ -45,18 +47,22 @@ interface DeployPortFieldProps {
 }
 
 export function DeployPortField({
+  assignedPort = null,
+  disabled = false,
   projectId,
   port,
   reservations,
   canCheckPorts,
   onChange,
 }: DeployPortFieldProps) {
-  const check = canCheckPorts
+  const isAssigned = assignedPort !== null;
+  const blocked = disabled || isAssigned || !canCheckPorts;
+  const check = !blocked
     ? checkPublishedPort(port.publishedPort, reservations)
     : NO_CHECK;
   const reservation = usePortReservation(
     projectId,
-    port.publishedPort,
+    blocked ? null : port.publishedPort,
     check.status === 'reserved',
   );
 
@@ -64,7 +70,10 @@ export function DeployPortField({
 
   let tone: Tone = 'neutral';
   let message: string | null = null;
-  if (reservation.status === 'reserved') {
+  if (isAssigned) {
+    tone = 'green';
+    message = 'Puerto asignado al contenedor';
+  } else if (reservation.status === 'reserved') {
     tone = 'green';
     message = 'Puerto reservado';
   } else if (pending) {
@@ -83,15 +92,29 @@ export function DeployPortField({
   return (
     <>
       <label className="flex items-center gap-2 text-[11.5px] text-[#51607a] dark:text-[#a7b4c8]">
-        Puerto del host
+        Puerto PC y contenedor
         <input
-          value={port.publishedPort ?? ''}
-          onChange={(event) => onChange(event.target.value)}
+          value={assignedPort ?? port.publishedPort ?? ''}
+          disabled={disabled || isAssigned}
+          onChange={(event) => {
+            const publishedPort = event.target.value;
+            console.log('[ports:ui] Cambio de puerto PC y contenedor', {
+              projectId,
+              composePath: port.dockerComposePath,
+              service: port.service,
+              sourceTargetPort: port.targetPort,
+              targetPort: publishedPort,
+              protocol: port.protocol,
+              previousPublishedPort: port.publishedPort,
+              publishedPort,
+            });
+            onChange(publishedPort);
+          }}
           readOnly={pending}
           aria-busy={pending}
           placeholder={port.mappingType === 'range' ? '8000-8002' : '5173'}
           inputMode="numeric"
-          className={`h-8 w-[112px] rounded-md border bg-white px-2 font-mono text-[12px] text-[#16202e] outline-none placeholder:text-[#a7b4c8] dark:bg-[#0c121d] dark:text-[#e8edf6] ${BORDER[tone]} ${
+          className={`h-8 w-[112px] rounded-md border bg-white px-2 font-mono text-[12px] text-[#16202e] outline-none placeholder:text-[#a7b4c8] disabled:cursor-not-allowed disabled:opacity-70 dark:bg-[#0c121d] dark:text-[#e8edf6] ${BORDER[tone]} ${
             pending ? 'cursor-wait opacity-60' : ''
           }`}
         />
@@ -103,7 +126,7 @@ export function DeployPortField({
               className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#c8d0dc] border-t-[#2257c4] dark:border-[#35435a] dark:border-t-[#5b8df5]"
             />
           )}
-          {reservation.status === 'reserved' && (
+          {(isAssigned || reservation.status === 'reserved') && (
             <span className={TEXT.green}>
               <AppIcon icon={Check} size={14} strokeWidth={2.6} />
             </span>

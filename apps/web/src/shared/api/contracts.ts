@@ -16,6 +16,7 @@ export type {
   CreateRepositoryResponse,
   DeployComposeRequest,
   DeploymentResponse,
+  DeploymentPortsResponse,
   DeploymentServiceResponse,
   InitProjectRequest,
   InitProjectResponse,

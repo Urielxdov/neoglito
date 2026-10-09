@@ -1,20 +1,24 @@
-import type { Project } from "@neoglito/web/features/projects/project.model"
-import type { ProjectDetailRepositoryInfo } from "@neoglito/web/features/projects/components/detail/project-detail-view"
-import type { AnalyzeState, AnalyzeTab } from "@neoglito/web/features/analysis/analysis.reducer"
-import { formatRelativeTime } from "@neoglito/web/shared/utils/relative-time"
-import { AnalyzeRepoGroup } from "@neoglito/web/features/projects/components/analyze/analyze-repo-group"
-import { AnalyzeRelationsPlaceholder } from "@neoglito/web/features/projects/components/analyze/analyze-relations-placeholder"
-import { serviceTone } from "@neoglito/web/features/projects/components/analyze/analyze-service-tone"
-import { shortName } from "@neoglito/web/features/repositories/repository-name"
+import type { Project } from '@neoglito/web/features/projects/project.model';
+import type { ProjectDetailRepositoryInfo } from '@neoglito/web/features/projects/components/detail/project-detail-view';
+import type {
+  AnalyzeState,
+  AnalyzeTab,
+} from '@neoglito/web/features/analysis/analysis.reducer';
+import { formatRelativeTime } from '@neoglito/web/shared/utils/relative-time';
+import { AnalyzeRepoGroup } from '@neoglito/web/features/projects/components/analyze/analyze-repo-group';
+import { AnalyzeRelationsPlaceholder } from '@neoglito/web/features/projects/components/analyze/analyze-relations-placeholder';
+import { serviceTone } from '@neoglito/web/features/projects/components/analyze/analyze-service-tone';
+import { shortName } from '@neoglito/web/features/repositories/repository-name';
+import { AnalyzeServiceTypeBadge } from '@neoglito/web/features/projects/components/analyze/analyze-service-type-badge';
 
 interface ProjectAnalyzeViewProps {
-  project: Project
-  repositories: ProjectDetailRepositoryInfo[]
-  analyze: AnalyzeState
-  onBack(): void
-  onToggleGroup(repositoryId: number): void
-  onSelectService(key: string): void
-  onTabChange(tab: AnalyzeTab): void
+  project: Project;
+  repositories: ProjectDetailRepositoryInfo[];
+  analyze: AnalyzeState;
+  onBack(): void;
+  onToggleGroup(repositoryId: number): void;
+  onSelectService(key: string): void;
+  onTabChange(tab: AnalyzeTab): void;
 }
 
 export function ProjectAnalyzeView({
@@ -26,50 +30,67 @@ export function ProjectAnalyzeView({
   onSelectService,
   onTabChange,
 }: ProjectAnalyzeViewProps) {
-  const total = analyze.repos.length
-  const settled = analyze.repos.filter((repo) => repo.status !== 'pending').length
-  const failed = analyze.repos.filter((repo) => repo.status === 'failed').length
-  const pct = total > 0 ? Math.round((settled / total) * 100) : 0
-  const done = settled === total
+  const total = analyze.repos.length;
+  const settled = analyze.repos.filter(
+    (repo) => repo.status !== 'pending',
+  ).length;
+  const failed = analyze.repos.filter(
+    (repo) => repo.status === 'failed',
+  ).length;
+  const pct = total > 0 ? Math.round((settled / total) * 100) : 0;
+  const done = settled === total;
 
-  const stateLabel = !done ? 'Analizando' : failed > 0 ? 'Con errores' : 'Listo'
+  const stateLabel = !done
+    ? 'Analizando'
+    : failed > 0
+      ? 'Con errores'
+      : 'Listo';
   const stateFg = !done
     ? 'text-[#2257c4] dark:text-[#5b8df5]'
     : failed > 0
       ? 'text-[#a4550a] dark:text-[#f0a458]'
-      : 'text-[#1d7a45] dark:text-[#5fcf8f]'
+      : 'text-[#1d7a45] dark:text-[#5fcf8f]';
   const stateBg = !done
     ? 'bg-[#eef3fc] dark:bg-[#18243a]'
     : failed > 0
       ? 'bg-[#fbefe0] dark:bg-[#2d1f10]'
-      : 'bg-[#e6f4ec] dark:bg-[#12291d]'
+      : 'bg-[#e6f4ec] dark:bg-[#12291d]';
 
   const selectedKey =
     analyze.selectedKey ??
     (() => {
       const firstSucceeded = analyze.repos.find(
-        (repo) => repo.status === 'succeeded' && (repo.deployment?.services.length ?? 0) > 0,
-      )
-      return firstSucceeded ? `${firstSucceeded.repositoryId}:0` : null
-    })()
+        (repo) =>
+          repo.status === 'succeeded' &&
+          (repo.deployment?.services.length ?? 0) > 0,
+      );
+      return firstSucceeded ? `${firstSucceeded.repositoryId}:0` : null;
+    })();
 
-  const [selectedRepositoryIdRaw, selectedServiceIndexRaw] = selectedKey?.split(':') ?? []
-  const selectedRepositoryId = selectedRepositoryIdRaw ? Number(selectedRepositoryIdRaw) : null
-  const selectedServiceIndex = selectedServiceIndexRaw ? Number(selectedServiceIndexRaw) : null
+  const [selectedRepositoryIdRaw, selectedServiceIndexRaw] =
+    selectedKey?.split(':') ?? [];
+  const selectedRepositoryId = selectedRepositoryIdRaw
+    ? Number(selectedRepositoryIdRaw)
+    : null;
+  const selectedServiceIndex = selectedServiceIndexRaw
+    ? Number(selectedServiceIndexRaw)
+    : null;
   const selectedAnalyzeRepo = analyze.repos.find(
     (repo) => repo.repositoryId === selectedRepositoryId,
-  )
+  );
   const selectedRepository = repositories.find(
     (repository) => repository.id === selectedRepositoryId,
-  )
+  );
   const selectedService =
     selectedAnalyzeRepo?.deployment && selectedServiceIndex !== null
       ? selectedAnalyzeRepo.deployment.services[selectedServiceIndex]
-      : undefined
+      : undefined;
 
   const allServices = analyze.repos.flatMap((repo) => {
-    const repository = repositories.find((r) => r.id === repo.repositoryId)
-    const repositoryName = repository ? shortName(repository.name) : `#${repo.repositoryId}`
+    const repository = repositories.find((r) => r.id === repo.repositoryId);
+    const repositoryName = repository
+      ? shortName(repository.name)
+      : `#${repo.repositoryId}`;
 
     return (
       repo.deployment?.services.map((service, serviceIndex) => ({
@@ -79,13 +100,17 @@ export function ProjectAnalyzeView({
         status: service.status,
         health: service.health,
       })) ?? []
-    )
-  })
+    );
+  });
 
   const tabs: Array<{ key: AnalyzeTab; label: string; count: string }> = [
     { key: 'services', label: 'Servicios', count: String(total) },
-    { key: 'relations', label: 'Relaciones', count: String(allServices.length) },
-  ]
+    {
+      key: 'relations',
+      label: 'Relaciones',
+      count: String(allServices.length),
+    },
+  ];
 
   return (
     <div className="mx-auto mt-[22px] flex min-h-0 w-full max-w-[1200px] flex-1 flex-col gap-[18px]">
@@ -145,126 +170,162 @@ export function ProjectAnalyzeView({
       )}
 
       {analyze.tab === 'services' && (
-      <div className="flex flex-1 flex-wrap items-start gap-[18px]">
-        <aside className="max-w-[320px] min-w-0 flex-1 basis-[260px] overflow-hidden rounded-2xl border border-[#e6eaf0] bg-white shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:border-[#253044] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
-          <div className="flex items-center justify-between gap-2.5 border-b border-[#e6eaf0] px-[18px] py-3.5 dark:border-[#253044]">
-            <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#8c98ac] dark:text-[#7a8699]">
-              Repositorios
-            </span>
-            <span className="text-[12px] text-[#8c98ac] dark:text-[#7a8699]">{total}</span>
-          </div>
-          {analyze.repos.map((repo, index) => {
-            const repository = repositories.find((r) => r.id === repo.repositoryId)
-            const services =
-              repo.deployment?.services.map((service, serviceIndex) => ({
-                key: `${repo.repositoryId}:${serviceIndex}`,
-                name: service.composeServiceName,
-                status: service.status,
-                health: service.health,
-              })) ?? []
-
-            return (
-              <AnalyzeRepoGroup
-                key={repo.repositoryId}
-                repositoryName={repository ? shortName(repository.name) : `#${repo.repositoryId}`}
-                status={repo.status}
-                message={repo.message}
-                services={services}
-                collapsed={Boolean(analyze.collapsed[repo.repositoryId])}
-                selectedKey={selectedKey}
-                isFirst={index === 0}
-                onToggleCollapse={() => onToggleGroup(repo.repositoryId)}
-                onSelectService={onSelectService}
-              />
-            )
-          })}
-        </aside>
-
-        <section className="min-w-0 flex-[1_1_420px] overflow-hidden rounded-2xl border border-[#e6eaf0] bg-white shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:border-[#253044] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
-          {selectedService && selectedRepository && selectedAnalyzeRepo?.deployment ? (
-            <>
-              <div className="flex flex-wrap items-center gap-3.5 border-b border-[#e6eaf0] px-[22px] py-[18px] dark:border-[#253044]">
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[15.5px] font-semibold text-[#16202e] dark:text-[#e8edf6]">
-                    {selectedService.composeServiceName}
-                  </span>
-                  <span className="block font-mono text-[12px] text-[#8c98ac] dark:text-[#7a8699]">
-                    {shortName(selectedRepository.name)}
-                  </span>
-                </span>
-                <span
-                  className={`inline-flex h-[22px] shrink-0 items-center whitespace-nowrap rounded-full px-2.5 text-[11.5px] font-semibold ${serviceTone(selectedService.status, selectedService.health).textClassName} ${serviceTone(selectedService.status, selectedService.health).bgClassName}`}
-                >
-                  {serviceTone(selectedService.status, selectedService.health).label}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-px border-b border-[#e6eaf0] bg-[#e6eaf0] dark:border-[#253044] dark:bg-[#253044]">
-                {[
-                  { k: 'Estado', v: selectedService.status },
-                  { k: 'Salud', v: selectedService.health },
-                  { k: 'Archivo', v: selectedAnalyzeRepo.deployment.composePath },
-                  {
-                    k: 'Observado',
-                    v: formatRelativeTime(new Date(selectedService.lastObservedAt)),
-                  },
-                ].map((fact) => (
-                  <div
-                    key={fact.k}
-                    className="flex flex-col gap-1 bg-white px-[22px] py-3.5 dark:bg-[#111826]"
-                  >
-                    <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#a7b0bd] dark:text-[#5f6b7e]">
-                      {fact.k}
-                    </span>
-                    <span className="truncate font-mono text-[13px] text-[#16202e] dark:text-[#e8edf6]">
-                      {fact.v}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex flex-col gap-2.5 px-[22px] py-[18px]">
-                <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#8c98ac] dark:text-[#7a8699]">
-                  Servicios de {shortName(selectedRepository.name)}
-                </span>
-                <div className="flex flex-col gap-1.5 rounded-lg border border-[#e0e6ef] p-2 font-mono text-[12.5px] dark:border-[#253044]">
-                  {selectedAnalyzeRepo.deployment.services.map((service, serviceIndex) => {
-                    const tone = serviceTone(service.status, service.health)
-                    const key = `${selectedAnalyzeRepo.repositoryId}:${serviceIndex}`
-
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => onSelectService(key)}
-                        className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-[#f8fafc] dark:hover:bg-[#0c121d] ${
-                          key === selectedKey ? 'bg-[#f8fafc] dark:bg-[#0c121d]' : ''
-                        }`}
-                      >
-                        <span
-                          aria-hidden="true"
-                          className={`block h-[7px] w-[7px] shrink-0 rounded-full ${tone.dotClassName}`}
-                        />
-                        <span className="text-[#16202e] dark:text-[#e8edf6]">
-                          {service.composeServiceName}
-                        </span>
-                        <span className={`ml-auto ${tone.textClassName}`}>{tone.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex h-full min-h-[220px] items-center justify-center px-6 py-10 text-center text-[13px] text-[#8c98ac] dark:text-[#7a8699]">
-              {done && failed === total
-                ? 'Ningún servicio pudo desplegarse.'
-                : 'Selecciona un servicio para ver su estado.'}
+        <div className="flex flex-1 flex-wrap items-start gap-[18px]">
+          <aside className="max-w-[320px] min-w-0 flex-1 basis-[260px] overflow-hidden rounded-2xl border border-[#e6eaf0] bg-white shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:border-[#253044] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
+            <div className="flex items-center justify-between gap-2.5 border-b border-[#e6eaf0] px-[18px] py-3.5 dark:border-[#253044]">
+              <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#8c98ac] dark:text-[#7a8699]">
+                Repositorios
+              </span>
+              <span className="text-[12px] text-[#8c98ac] dark:text-[#7a8699]">
+                {total}
+              </span>
             </div>
-          )}
-        </section>
-      </div>
+            {analyze.repos.map((repo, index) => {
+              const repository = repositories.find(
+                (r) => r.id === repo.repositoryId,
+              );
+              const services =
+                repo.deployment?.services.map((service, serviceIndex) => ({
+                  key: `${repo.repositoryId}:${serviceIndex}`,
+                  name: service.composeServiceName,
+                  status: service.status,
+                  health: service.health,
+                  serviceType: service.serviceType,
+                })) ?? [];
+
+              return (
+                <AnalyzeRepoGroup
+                  key={repo.repositoryId}
+                  repositoryName={
+                    repository
+                      ? shortName(repository.name)
+                      : `#${repo.repositoryId}`
+                  }
+                  status={repo.status}
+                  message={repo.message}
+                  services={services}
+                  collapsed={Boolean(analyze.collapsed[repo.repositoryId])}
+                  selectedKey={selectedKey}
+                  isFirst={index === 0}
+                  onToggleCollapse={() => onToggleGroup(repo.repositoryId)}
+                  onSelectService={onSelectService}
+                />
+              );
+            })}
+          </aside>
+
+          <section className="min-w-0 flex-[1_1_420px] overflow-hidden rounded-2xl border border-[#e6eaf0] bg-white shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:border-[#253044] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
+            {selectedService &&
+            selectedRepository &&
+            selectedAnalyzeRepo?.deployment ? (
+              <>
+                <div className="flex flex-wrap items-center gap-3.5 border-b border-[#e6eaf0] px-[22px] py-[18px] dark:border-[#253044]">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15.5px] font-semibold text-[#16202e] dark:text-[#e8edf6]">
+                      {selectedService.composeServiceName}
+                    </span>
+                    <span className="block font-mono text-[12px] text-[#8c98ac] dark:text-[#7a8699]">
+                      {shortName(selectedRepository.name)}
+                    </span>
+                  </span>
+                  <AnalyzeServiceTypeBadge type={selectedService.serviceType} />
+                  <span
+                    className={`inline-flex h-[22px] shrink-0 items-center whitespace-nowrap rounded-full px-2.5 text-[11.5px] font-semibold ${serviceTone(selectedService.status, selectedService.health).textClassName} ${serviceTone(selectedService.status, selectedService.health).bgClassName}`}
+                  >
+                    {
+                      serviceTone(
+                        selectedService.status,
+                        selectedService.health,
+                      ).label
+                    }
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-px border-b border-[#e6eaf0] bg-[#e6eaf0] dark:border-[#253044] dark:bg-[#253044]">
+                  {[
+                    { k: 'Estado', v: selectedService.status },
+                    { k: 'Salud', v: selectedService.health },
+                    {
+                      k: 'Archivo',
+                      v: selectedAnalyzeRepo.deployment.composePath,
+                    },
+                    {
+                      k: 'Observado',
+                      v: formatRelativeTime(
+                        new Date(selectedService.lastObservedAt),
+                      ),
+                    },
+                  ].map((fact) => (
+                    <div
+                      key={fact.k}
+                      className="flex flex-col gap-1 bg-white px-[22px] py-3.5 dark:bg-[#111826]"
+                    >
+                      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#a7b0bd] dark:text-[#5f6b7e]">
+                        {fact.k}
+                      </span>
+                      <span className="truncate font-mono text-[13px] text-[#16202e] dark:text-[#e8edf6]">
+                        {fact.v}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col gap-2.5 px-[22px] py-[18px]">
+                  <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#8c98ac] dark:text-[#7a8699]">
+                    Servicios de {shortName(selectedRepository.name)}
+                  </span>
+                  <div className="flex flex-col gap-1.5 rounded-lg border border-[#e0e6ef] p-2 font-mono text-[12.5px] dark:border-[#253044]">
+                    {selectedAnalyzeRepo.deployment.services.map(
+                      (service, serviceIndex) => {
+                        const tone = serviceTone(
+                          service.status,
+                          service.health,
+                        );
+                        const key = `${selectedAnalyzeRepo.repositoryId}:${serviceIndex}`;
+
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => onSelectService(key)}
+                            className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-[#f8fafc] dark:hover:bg-[#0c121d] ${
+                              key === selectedKey
+                                ? 'bg-[#f8fafc] dark:bg-[#0c121d]'
+                                : ''
+                            }`}
+                          >
+                            <span
+                              aria-hidden="true"
+                              className={`block h-[7px] w-[7px] shrink-0 rounded-full ${tone.dotClassName}`}
+                            />
+                            <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-[#16202e] dark:text-[#e8edf6]">
+                              <span className="truncate">
+                                {service.composeServiceName}
+                              </span>
+                              <AnalyzeServiceTypeBadge
+                                type={service.serviceType}
+                              />
+                            </span>
+                            <span className={`ml-auto ${tone.textClassName}`}>
+                              {tone.label}
+                            </span>
+                          </button>
+                        );
+                      },
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex h-full min-h-[220px] items-center justify-center px-6 py-10 text-center text-[13px] text-[#8c98ac] dark:text-[#7a8699]">
+                {done && failed === total
+                  ? 'Ningún servicio pudo desplegarse.'
+                  : 'Selecciona un servicio para ver su estado.'}
+              </div>
+            )}
+          </section>
+        </div>
       )}
     </div>
-  )
+  );
 }

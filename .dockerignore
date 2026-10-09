@@ -5,6 +5,7 @@ node_modules/
 # Archivos de build locales
 dist/
 repo/
+.neoglito/
 coverage/
 **/dist
 **/coverage

@@ -1,7 +1,7 @@
 import type {
   PortResult,
   ProbeOutcome,
-} from '../infrastructure/port-identification.js';
+} from '../infrastructure/probing/port-identification.js';
 
 export const CONTAINER_PROBE_PORT = Symbol('CONTAINER_PROBE_PORT');
 
@@ -12,5 +12,5 @@ export interface ContainerProbe {
 
 /** Identifica por red qué protocolo hablan los puertos publicados de un contenedor. */
 export interface ContainerProbePort {
-  probe(ports: readonly number[]): Promise<ContainerProbe>;
+  probe(ports: readonly number[], host?: string): Promise<ContainerProbe>;
 }

@@ -6,6 +6,7 @@ import {
   Delete,
   Get,
   Inject,
+  Logger,
   Param,
   ParseIntPipe,
   Post,
@@ -33,13 +34,17 @@ import { ApiSuccessResponseDoc } from '../../shared/presentation/swagger/api-res
 
 function assertValidPort(port: number): void {
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new BadRequestException('El puerto debe ser un entero entre 1 y 65535');
+    throw new BadRequestException(
+      'El puerto debe ser un entero entre 1 y 65535',
+    );
   }
 }
 
 @ApiTags('Port')
 @Controller('port')
 export class PortController {
+  private readonly logger = new Logger(PortController.name);
+
   constructor(
     @Inject(PORT_RESERVATION_PORT)
     private readonly portReservation: PortReservationPort,
@@ -49,7 +54,8 @@ export class PortController {
   @ApiOperation({ summary: 'Obtiene todos los puertos reservados' })
   @ApiSuccessResponseDoc({
     status: 200,
-    description: 'Relación de claves de propietario con claves de puerto reservado',
+    description:
+      'Relación de claves de propietario con claves de puerto reservado',
     dataSchema: {
       type: 'object',
       additionalProperties: { type: 'string' },
@@ -59,7 +65,7 @@ export class PortController {
     },
   })
   async availablePorts(): Promise<PortReservationsResponse> {
-    return this.portReservation.getAll()
+    return this.portReservation.getAll();
   }
 
   @Post()
@@ -88,6 +94,9 @@ export class PortController {
   async reserve(
     @Body() dto: ReservePortDto,
   ): Promise<{ port: number; ownerId: string }> {
+    this.logger.log(
+      `[ports:backend] POST /port recibido ${JSON.stringify({ projectId: dto.projectId, port: dto.port })}`,
+    );
     assertValidPort(dto.port);
     if (!Number.isInteger(dto.projectId)) {
       throw new BadRequestException('projectId debe ser un entero');
@@ -98,6 +107,9 @@ export class PortController {
       dto.port,
       ownerId,
       DRAFT_PORT_TTL_SECONDS,
+    );
+    this.logger.log(
+      `[ports:backend] Resultado de reserva ${JSON.stringify({ projectId: dto.projectId, port: dto.port, ownerId, reserved, ttlSeconds: DRAFT_PORT_TTL_SECONDS })}`,
     );
     if (!reserved) {
       throw new ConflictException(`El puerto ${dto.port} no está disponible`);
@@ -129,12 +141,16 @@ export class PortController {
     @Param('projectId', ParseIntPipe) projectId: number,
     @Param('port', ParseIntPipe) port: number,
   ): Promise<{ released: boolean }> {
+    this.logger.log(
+      `[ports:backend] DELETE reserva provisional recibido ${JSON.stringify({ projectId, port })}`,
+    );
     assertValidPort(port);
 
-    return {
-      released: await this.portReservation.releasePort(
-        draftPortOwnerId(projectId, port),
-      ),
-    };
+    const ownerId = draftPortOwnerId(projectId, port);
+    const released = await this.portReservation.releasePort(ownerId);
+    this.logger.log(
+      `[ports:backend] Resultado de liberación ${JSON.stringify({ projectId, port, ownerId, released })}`,
+    );
+    return { released };
   }
 }

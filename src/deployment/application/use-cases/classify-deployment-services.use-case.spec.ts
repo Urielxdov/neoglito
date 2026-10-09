@@ -1,23 +1,26 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import { resolve } from 'node:path';
 import type {
+  ContainerInspection,
   ContainerRuntimePort,
   ContainerRuntimeService,
 } from '../../../container/application/container-runtime.port.js';
-import type { ContainerProbePort } from '../../../ports/application/container-probe.port.js';
+import type { Classification } from '../../../ports/application/container-classification.port.js';
+import { ContainerClassificationService } from '../../../ports/infrastructure/classification/container-classification.service.js';
 import type { PrismaService } from '../../../prisma/prisma.service.js';
-import { resolveServiceType } from '../../domain/services/protocol-service-type.js';
+import { ServiceType as T } from '../../domain/value-objects/service-type.js';
 import { ClassifyDeploymentServicesUseCase } from './classify-deployment-services.use-case.js';
 
 const DEPLOYMENT_ID = '0dc6bf1b-0041-4f56-9d2e-8fe08d8c00e1';
 
-function storedService(id: string, composeServiceName: string, port: number) {
+function storedService(id: string, port: number) {
   return {
     id,
-    composeServiceName,
+    composeServiceName: id,
     port,
     status: 'running' as const,
     health: 'none' as const,
-    serviceType: 'UNKNOWN' as const,
+    serviceType: T.BACKEND,
     lastObservedAt: new Date('2026-10-01T00:00:00Z'),
     deploymentId: DEPLOYMENT_ID,
   };
@@ -28,11 +31,20 @@ function observedContainer(
   port: number,
   status: ContainerRuntimeService['status'] = 'running',
 ): ContainerRuntimeService {
-  return { containerId, composeServiceName: containerId, port, status, health: 'healthy' };
+  return {
+    containerId,
+    composeServiceName: containerId,
+    port,
+    status,
+    health: 'healthy',
+  };
 }
 
-function setup(observed: ContainerRuntimeService[], protocolsByPort: Record<number, string>) {
-  const services = [storedService('db', 'postgres', 5432), storedService('api', 'api', 8080)];
+function setup(
+  observed: ContainerRuntimeService[],
+  results: Record<string, Classification> = {},
+) {
+  const services = [storedService('db', 5432), storedService('api', 8080)];
   const deployment = {
     id: DEPLOYMENT_ID,
     projectId: 1,
@@ -43,14 +55,16 @@ function setup(observed: ContainerRuntimeService[], protocolsByPort: Record<numb
     finishedAt: null,
     services,
   };
-  const updates: Array<{ where: { id: string }; data: Record<string, unknown> }> = [];
-
+  const updates: Array<{
+    where: { id: string };
+    data: Record<string, unknown>;
+  }> = [];
   const prisma = {
     deployment: {
       findUnique: vi.fn(async () => deployment),
       findUniqueOrThrow: vi.fn(async () => ({
         ...deployment,
-        services: services.map((service) => ({
+        services: deployment.services.map((service) => ({
           ...service,
           ...updates.find((update) => update.where.id === service.id)?.data,
         })),
@@ -63,86 +77,255 @@ function setup(observed: ContainerRuntimeService[], protocolsByPort: Record<numb
       }),
     },
     $transaction: vi.fn(async (operations: unknown[]) => operations),
-  } as unknown as PrismaService;
-
-  const runtime = { list: vi.fn(async () => observed) } as unknown as ContainerRuntimePort;
-  const probe: ContainerProbePort = {
-    probe: vi.fn(async ([port]: readonly number[]) => {
-      const protocol = protocolsByPort[port];
-      return protocol
-        ? { outcome: { kind: 'identified' as const, protocols: [protocol as never] }, ports: [] }
-        : { outcome: { kind: 'unidentified' as const }, ports: [] };
-    }),
   };
-
+  const inspections: ContainerInspection[] = observed.map((container) => ({
+    containerId: container.containerId,
+    image: 'custom/app:1',
+    aliases: [container.composeServiceName],
+    ports: container.port > 0 ? [container.port] : [],
+    command: [],
+    env: {},
+  }));
+  const runtime = {
+    list: vi.fn(async () => observed),
+    inspect: vi.fn(async () => inspections),
+  };
+  const classifier = {
+    classify: vi.fn(async (containers: readonly ContainerInspection[]) =>
+      containers.map((container) => ({
+        containerId: container.containerId,
+        classification: results[container.containerId] ?? {
+          kind: 'unknown' as const,
+          evidence: [],
+        },
+      })),
+    ),
+  };
   return {
-    useCase: new ClassifyDeploymentServicesUseCase(prisma, runtime, probe),
+    useCase: new ClassifyDeploymentServicesUseCase(
+      prisma as unknown as PrismaService,
+      runtime as unknown as ContainerRuntimePort,
+      classifier,
+    ),
     prisma,
-    probe,
+    runtime,
+    classifier,
+    inspections,
+    deployment,
   };
 }
 
-describe('resolveServiceType', () => {
-  it.each([
-    ['postgres', 'DATABASE'],
-    ['mysql', 'DATABASE'],
-    ['mongo', 'DATABASE'],
-    ['resp', 'CACHE'],
-    ['memcached', 'CACHE'],
-    ['amqp', 'MESSAGE_BROKER'],
-    ['kafka', 'MESSAGE_BROKER'],
-    ['nats', 'MESSAGE_BROKER'],
-    ['mqtt', 'MESSAGE_BROKER'],
-    ['http', 'BACKEND'],
-  ] as const)('maps %s to %s', (protocol, serviceType) => {
-    expect(resolveServiceType({ kind: 'identified', protocols: [protocol] })).toBe(serviceType);
-  });
-
-  it('returns UNKNOWN when nothing was identified', () => {
-    expect(resolveServiceType({ kind: 'unidentified' })).toBe('UNKNOWN');
-    expect(resolveServiceType({ kind: 'no_listeners' })).toBe('UNKNOWN');
-  });
-});
-
 describe('ClassifyDeploymentServicesUseCase', () => {
-  it('probes the port of every running container and stores its service type', async () => {
-    const { useCase, probe } = setup(
-      [observedContainer('db', 5432), observedContainer('api', 8080)],
-      { 5432: 'postgres', 8080: 'http' },
-    );
-
-    const deployment = await useCase.execute(DEPLOYMENT_ID);
-
-    expect(probe.probe).toHaveBeenCalledWith([5432]);
-    expect(probe.probe).toHaveBeenCalledWith([8080]);
-    expect(
-      deployment.services.map((service) => [service.id, service.serviceType]),
-    ).toEqual([
-      ['db', 'DATABASE'],
-      ['api', 'BACKEND'],
+  it('observes the saved configuration using the independent project name', async () => {
+    const { useCase, deployment, runtime } = setup([
+      observedContainer('db', 15432),
+      observedContainer('api', 13000),
     ]);
+    deployment.composePath = resolve(
+      `/repos/demo/.neoglito-${DEPLOYMENT_ID}.compose.yml`,
+    );
+    await useCase.execute(DEPLOYMENT_ID);
+    expect(runtime.list).toHaveBeenCalledExactlyOnceWith(
+      resolve('/repos/demo'),
+      deployment.composePath,
+      `neoglito-${DEPLOYMENT_ID}`,
+    );
+  });
+  it('inspects the deployment, classifies it and stores resolved types and observed state', async () => {
+    const { useCase, runtime, classifier, inspections, prisma } = setup(
+      [observedContainer('db', 5432), observedContainer('api', 9090)],
+      {
+        db: {
+          kind: 'resolved',
+          type: T.DATABASE,
+          evidence: ['imagen: postgres'],
+        },
+        api: {
+          kind: 'resolved',
+          type: T.BACKEND,
+          evidence: ['huella HTTP: gunicorn'],
+        },
+      },
+    );
+    const result = await useCase.execute(DEPLOYMENT_ID);
+    expect(runtime.inspect).toHaveBeenCalledWith(['db', 'api']);
+    expect(classifier.classify).toHaveBeenCalledWith(inspections);
+    expect(
+      result.services.map((service) => [
+        service.id,
+        service.serviceType,
+        service.port,
+      ]),
+    ).toEqual([
+      ['db', T.DATABASE, 5432],
+      ['api', T.BACKEND, 9090],
+    ]);
+    expect(prisma.$transaction).toHaveBeenCalledOnce();
+    expect(prisma.deploymentService.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'api' },
+        data: expect.objectContaining({
+          status: 'running',
+          health: 'healthy',
+          lastObservedAt: expect.any(Date),
+        }),
+      }),
+    );
   });
 
-  it('rejects the classification when a container is not running', async () => {
-    const { useCase, probe } = setup(
-      [observedContainer('db', 5432), observedContainer('api', 8080, 'exited')],
-      {},
+  it('allows a worker without a published port', async () => {
+    const { useCase, classifier, inspections } = setup(
+      [observedContainer('db', 5432), observedContainer('api', 0)],
+      {
+        api: {
+          kind: 'resolved',
+          type: T.WORKER,
+          evidence: ['comando: celery worker'],
+        },
+      },
     );
+    const result = await useCase.execute(DEPLOYMENT_ID);
+    expect(inspections[1].ports).toEqual([]);
+    expect(classifier.classify).toHaveBeenCalledOnce();
+    expect(result.services[1]).toMatchObject({
+      port: 0,
+      serviceType: T.WORKER,
+    });
+  });
 
-    await expect(useCase.execute(DEPLOYMENT_ID)).rejects.toBeInstanceOf(ConflictException);
+  it('persists broker and worker types from the real classification chain', async () => {
+    const { useCase, classifier, inspections, runtime } = setup([
+      observedContainer('db', 0),
+      observedContainer('api', 0),
+    ]);
+    inspections[0] = {
+      containerId: 'db',
+      image: 'redis:7',
+      aliases: ['redis'],
+      ports: [],
+      command: ['redis-server'],
+      env: {},
+    };
+    inspections[1] = {
+      containerId: 'api',
+      image: 'custom/app',
+      aliases: ['worker'],
+      ports: [],
+      command: ['celery', 'worker'],
+      env: { CELERY_BROKER_URL: 'redis://redis:6379/0' },
+    };
+    const probe = { probe: vi.fn() };
+    const service = new ContainerClassificationService(
+      probe,
+      runtime as unknown as ContainerRuntimePort,
+    );
+    vi.mocked(classifier.classify).mockImplementation((containers) =>
+      service.classify(containers),
+    );
+    const result = await useCase.execute(DEPLOYMENT_ID);
+    expect(result.services.map((container) => container.serviceType)).toEqual([
+      T.MESSAGE_BROKER,
+      T.WORKER,
+    ]);
     expect(probe.probe).not.toHaveBeenCalled();
   });
 
-  it('rejects the classification when a container no longer exists', async () => {
-    const { useCase } = setup([observedContainer('db', 5432)], {});
+  it.each(['ambiguous', 'conflict', 'unknown'] as const)(
+    'stores UNKNOWN for %s instead of choosing a candidate',
+    async (kind) => {
+      const classification: Classification =
+        kind === 'unknown'
+          ? { kind, evidence: [] }
+          : {
+              kind,
+              candidates: [T.CACHE, T.MESSAGE_BROKER],
+              evidence: ['resp'],
+            };
+      const { useCase } = setup(
+        [observedContainer('db', 5432), observedContainer('api', 8080)],
+        { db: classification },
+      );
+      expect(
+        (await useCase.execute(DEPLOYMENT_ID)).services[0].serviceType,
+      ).toBe(T.UNKNOWN);
+    },
+  );
 
-    await expect(useCase.execute(DEPLOYMENT_ID)).rejects.toBeInstanceOf(ConflictException);
+  it('rejects stopped containers before inspecting or classifying', async () => {
+    const { useCase, classifier, runtime, prisma } = setup([
+      observedContainer('db', 5432),
+      observedContainer('api', 8080, 'exited'),
+    ]);
+    await expect(useCase.execute(DEPLOYMENT_ID)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(runtime.inspect).not.toHaveBeenCalled();
+    expect(classifier.classify).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects a missing container', async () => {
+    const { useCase, classifier } = setup([observedContainer('db', 5432)]);
+    await expect(useCase.execute(DEPLOYMENT_ID)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(classifier.classify).not.toHaveBeenCalled();
+  });
+
+  it('rejects incomplete inspection before writing', async () => {
+    const { useCase, runtime, inspections, prisma } = setup([
+      observedContainer('db', 5432),
+      observedContainer('api', 8080),
+    ]);
+    vi.mocked(runtime.inspect).mockResolvedValueOnce([inspections[0]]);
+    await expect(useCase.execute(DEPLOYMENT_ID)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(prisma.deploymentService.update).not.toHaveBeenCalled();
+  });
+
+  it('reports failed Docker inspection without writing partial results', async () => {
+    const { useCase, runtime, prisma } = setup([
+      observedContainer('db', 5432),
+      observedContainer('api', 8080),
+    ]);
+    vi.mocked(runtime.inspect).mockRejectedValueOnce(
+      new Error('Docker unavailable'),
+    );
+    await expect(useCase.execute(DEPLOYMENT_ID)).rejects.toThrow(
+      'Docker unavailable',
+    );
+    expect(prisma.deploymentService.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects an incomplete classification before writing', async () => {
+    const { useCase, classifier, prisma } = setup([
+      observedContainer('db', 5432),
+      observedContainer('api', 8080),
+    ]);
+    vi.mocked(classifier.classify).mockResolvedValueOnce([]);
+    await expect(useCase.execute(DEPLOYMENT_ID)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(prisma.deploymentService.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects an empty deployment', async () => {
+    const { useCase, deployment, runtime } = setup([]);
+    deployment.services = [];
+    await expect(useCase.execute(DEPLOYMENT_ID)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(runtime.list).not.toHaveBeenCalled();
   });
 
   it('fails when the deployment does not exist', async () => {
-    const { useCase, prisma } = setup([], {});
-    vi.mocked(prisma.deployment.findUnique).mockResolvedValueOnce(null as never);
-
-    await expect(useCase.execute(DEPLOYMENT_ID)).rejects.toBeInstanceOf(NotFoundException);
+    const { useCase, prisma } = setup([]);
+    vi.mocked(prisma.deployment.findUnique).mockResolvedValueOnce(
+      null as never,
+    );
+    await expect(useCase.execute(DEPLOYMENT_ID)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });

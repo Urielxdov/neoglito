@@ -55,6 +55,9 @@ lerna-debug.log*
 # local cloned repositories
 repo/
 
+# Deployment configuration generated at runtime
+.neoglito/
+
 # Runtime data
 pids
 *.pid

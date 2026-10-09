@@ -22,7 +22,10 @@ export class RestoreDeploymentPortReservationsService implements OnApplicationBo
 
   async onApplicationBootstrap(): Promise<void> {
     const services = await this.prisma.deploymentService.findMany({
-      where: { status: { in: ['running', 'paused', 'restarting'] } },
+      where: {
+        status: { in: ['running', 'paused', 'restarting'] },
+        port: { gt: 0 },
+      },
       select: { id: true, port: true },
     });
 

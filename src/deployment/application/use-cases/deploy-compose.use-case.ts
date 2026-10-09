@@ -5,9 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { readFile } from 'node:fs/promises';
 import { dirname, resolve, sep } from 'node:path';
-import { parse } from 'yaml';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { Container } from '../../../container/domain/entities/container.entity.js';
 import type {
@@ -26,6 +24,15 @@ import type {
   PortReservationPort,
 } from '../../../ports/application/port-reservation.port.js';
 import { ProjectAnalysisService } from '../../../analisys/application/project-analysis.service.js';
+import {
+  DEPLOYMENT_COMPOSE_PORT,
+  deploymentRuntimeProjectName,
+} from '../ports/deployment-compose.port.js';
+import type {
+  DeploymentComposePort,
+  DeploymentComposeConfiguration,
+  PreparedDeploymentCompose,
+} from '../ports/deployment-compose.port.js';
 
 interface DeploymentRecord {
   id: string;
@@ -83,9 +90,16 @@ export class DeployComposeUseCase {
     private readonly runtime: ContainerRuntimePort,
     @Inject(PORT_RESERVATION_PORT)
     private readonly portReservation: PortReservationPort,
+    @Inject(DEPLOYMENT_COMPOSE_PORT)
+    private readonly compose: DeploymentComposePort,
   ) {}
 
-  async execute(userId: number, projectId: number, composePath: string) {
+  async execute(
+    userId: number,
+    projectId: number,
+    composePath: string,
+    configuration: DeploymentComposeConfiguration = {},
+  ) {
     const { dockerFilesPath: candidates } =
       await this.projectAnalysis.getComposeFiles(userId, projectId);
     const composeFile = candidates.find((candidate) =>
@@ -100,18 +114,39 @@ export class DeployComposeUseCase {
     const deployment = await this.prisma.deployment.create({
       data: { projectId, composePath: composeFile, status: 'pending' },
     });
+    this.logger.log(
+      `[deployment:compose] Archivo seleccionado ${JSON.stringify({ deploymentId: deployment.id, projectId, requestedComposePath: composePath, selectedComposePath: composeFile })}`,
+    );
     const portHolds: HeldPortReservation[] = [];
     const restoredOwnerIds: string[] = [];
+    let prepared: PreparedDeploymentCompose | undefined;
+    let runtimeStarted = false;
 
     try {
-      const publishedPorts = await this.extractPublishedPorts(composeFile);
+      prepared = await this.compose.prepare(
+        composeFile,
+        deployment.id,
+        configuration,
+      );
+      await this.prisma.deployment.update({
+        where: { id: deployment.id },
+        data: { composePath: prepared.composePath },
+      });
+      const { publishedPorts } = prepared;
+      this.logger.log(
+        `[deployment:compose] Puertos del archivo que se van a reservar ${JSON.stringify({ deploymentId: deployment.id, projectId, composePath: prepared.composePath, publishedPorts })}`,
+      );
       for (const port of publishedPorts) {
         // El puerto pasa del formulario (reserva provisional) al despliegue.
-        await this.portReservation.releasePort(draftPortOwnerId(projectId, port));
+        await this.portReservation.releasePort(
+          draftPortOwnerId(projectId, port),
+        );
         const ownerId = this.deploymentPortOwnerId(deployment.id, port);
         const heldPort = await this.portReservation.holdPort(port, ownerId);
         if (!heldPort) {
-          throw new Error(`No se pudo reservar temporalmente el puerto ${port}`);
+          throw new Error(
+            `No se pudo reservar temporalmente el puerto ${port}`,
+          );
         }
 
         portHolds.push(heldPort);
@@ -122,14 +157,28 @@ export class DeployComposeUseCase {
         data: { status: 'building' },
       });
       await Promise.all(portHolds.map((heldPort) => heldPort.handoff()));
-      await this.runtime.up(dirname(composeFile), composeFile);
-      this.logger.debug('Hasta aqui bien');
+      runtimeStarted = true;
+      await this.runtime.up(
+        dirname(prepared.composePath),
+        prepared.composePath,
+        prepared.projectName,
+      );
+      this.logger.log(
+        `[deployment:compose] Docker Compose up completado ${JSON.stringify({ deploymentId: deployment.id, composePath: prepared.composePath, projectName: prepared.projectName })}`,
+      );
 
       await this.prisma.deployment.update({
         where: { id: deployment.id },
         data: { status: 'starting', startedAt: new Date() },
       });
-      const observed = await this.runtime.list(dirname(composeFile), composeFile);
+      const observed = await this.runtime.list(
+        dirname(prepared.composePath),
+        prepared.composePath,
+        prepared.projectName,
+      );
+      this.logger.log(
+        `[deployment:compose] Contenedores observados ${JSON.stringify({ deploymentId: deployment.id, services: observed.map((service) => ({ containerId: service.containerId, service: service.composeServiceName, port: service.port, status: service.status, health: service.health })) })}`,
+      );
       if (observed.length === 0) {
         throw new Error(
           'Docker Compose no reporto contenedores para el archivo seleccionado',
@@ -142,19 +191,21 @@ export class DeployComposeUseCase {
         ),
       );
       await Promise.all(
-        observed.map(async (service) => {
-          const restored = await this.portReservation.restorePort(
-            service.port,
-            service.containerId,
-          );
-          if (!restored) {
-            throw new Error(
-              `No se pudo transferir la reserva del puerto ${service.port} al contenedor ${service.containerId}`,
+        observed
+          .filter((service) => service.port > 0)
+          .map(async (service) => {
+            const restored = await this.portReservation.restorePort(
+              service.port,
+              service.containerId,
             );
-          }
+            if (!restored) {
+              throw new Error(
+                `No se pudo transferir la reserva del puerto ${service.port} al contenedor ${service.containerId}`,
+              );
+            }
 
-          restoredOwnerIds.push(service.containerId);
-        }),
+            restoredOwnerIds.push(service.containerId);
+          }),
       );
 
       await this.prisma.deploymentService.createMany({
@@ -176,13 +227,29 @@ export class DeployComposeUseCase {
       });
       return toDeployment(runningDeployment);
     } catch (error) {
+      // Compose puede haber creado parte de los contenedores antes de fallar.
+      if (runtimeStarted && prepared) {
+        await this.runtime
+          .down(
+            dirname(prepared.composePath),
+            prepared.composePath,
+            prepared.projectName,
+          )
+          .catch((cleanupError: unknown) => {
+            this.logger.error(
+              `No se pudo detener el despliegue fallido ${deployment.id}: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`,
+            );
+          });
+      }
       await Promise.all(
         portHolds.map((heldPort) =>
           this.portReservation.releasePort(heldPort.ownerId),
         ),
       );
       await Promise.all(
-        restoredOwnerIds.map((ownerId) => this.portReservation.releasePort(ownerId)),
+        restoredOwnerIds.map((ownerId) =>
+          this.portReservation.releasePort(ownerId),
+        ),
       );
       await this.prisma.deployment.update({
         where: { id: deployment.id },
@@ -200,75 +267,6 @@ export class DeployComposeUseCase {
 
   private deploymentPortOwnerId(deploymentId: string, port: number): string {
     return `deployment:${deploymentId}:port:${port}`;
-  }
-
-  private async extractPublishedPorts(composeFile: string): Promise<number[]> {
-    const fileContent = await readFile(composeFile, 'utf8');
-    const parsed = parse(fileContent) as unknown;
-    if (!this.isRecord(parsed) || !this.isRecord(parsed.services)) {
-      return [];
-    }
-
-    const ports = Object.values(parsed.services).flatMap((service) => {
-      if (!this.isRecord(service)) {
-        return [];
-      }
-
-      return this.extractServicePorts(service.ports);
-    });
-
-    return [...new Set(ports)];
-  }
-
-  private extractServicePorts(ports: unknown): number[] {
-    if (!Array.isArray(ports)) {
-      return [];
-    }
-
-    return ports.flatMap((port) => {
-      if (typeof port === 'number') {
-        return [];
-      }
-
-      if (typeof port === 'string') {
-        return this.extractStringPort(port);
-      }
-
-      if (this.isRecord(port)) {
-        const published = port.published;
-        if (typeof published === 'number' && this.isValidPort(published)) {
-          return [published];
-        }
-
-        if (typeof published === 'string') {
-          const parsedPort = Number(published);
-          return this.isValidPort(parsedPort) ? [parsedPort] : [];
-        }
-      }
-
-      return [];
-    });
-  }
-
-  private extractStringPort(port: string): number[] {
-    const normalized = port.trim();
-    if (!normalized.includes(':')) {
-      return [];
-    }
-
-    const withoutProtocol = normalized.split('/')[0];
-    const segments = withoutProtocol.split(':');
-    const publishedPort = Number(segments.at(-2));
-
-    return this.isValidPort(publishedPort) ? [publishedPort] : [];
-  }
-
-  private isValidPort(port: number): boolean {
-    return Number.isInteger(port) && port > 0 && port <= 65535;
-  }
-
-  private isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
 
   private samePath(left: string, right: string): boolean {
@@ -324,7 +322,11 @@ export class StopDeploymentUseCase {
     });
 
     try {
-      await this.runtime.down(dirname(deployment.composePath), deployment.composePath);
+      await this.runtime.down(
+        dirname(deployment.composePath),
+        deployment.composePath,
+        deploymentRuntimeProjectName(deployment.id, deployment.composePath),
+      );
       const services = await this.prisma.deploymentService.findMany({
         where: { deploymentId },
         select: { id: true },

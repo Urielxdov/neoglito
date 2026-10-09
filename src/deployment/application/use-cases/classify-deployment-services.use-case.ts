@@ -2,6 +2,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { dirname } from 'node:path';
@@ -11,26 +12,28 @@ import type {
   ContainerRuntimePort,
   ContainerRuntimeService,
 } from '../../../container/application/container-runtime.port.js';
-import { CONTAINER_PROBE_PORT } from '../../../ports/application/container-probe.port.js';
-import type { ContainerProbePort } from '../../../ports/application/container-probe.port.js';
-import { resolveServiceType } from '../../domain/services/protocol-service-type.js';
+import { CONTAINER_CLASSIFICATION_PORT } from '../../../ports/application/container-classification.port.js';
+import type { ContainerClassificationPort } from '../../../ports/application/container-classification.port.js';
+import { ServiceType } from '../../domain/value-objects/service-type.js';
 import { toDeployment } from './deploy-compose.use-case.js';
+import { deploymentRuntimeProjectName } from '../ports/deployment-compose.port.js';
 
 /**
- * Identifica la categoría (ServiceType) de cada contenedor de un despliegue
- * sondeando por red el puerto que publica (ver port-identification.ts).
+ * Clasifica los servicios por imagen, protocolo y evidencia adicional.
  *
  * Precondiciones: cada contenedor del despliegue debe seguir existiendo,
- * estar en `running` y tener un puerto publicado en el host.
+ * estar en `running`. Un contenedor puede no publicar puertos.
  */
 @Injectable()
 export class ClassifyDeploymentServicesUseCase {
+  private readonly logger = new Logger(ClassifyDeploymentServicesUseCase.name);
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(CONTAINER_RUNTIME_PORT)
     private readonly runtime: ContainerRuntimePort,
-    @Inject(CONTAINER_PROBE_PORT)
-    private readonly containerProbe: ContainerProbePort,
+    @Inject(CONTAINER_CLASSIFICATION_PORT)
+    private readonly classifier: ContainerClassificationPort,
   ) {}
 
   async execute(deploymentId: string) {
@@ -47,7 +50,10 @@ export class ClassifyDeploymentServicesUseCase {
       );
     }
 
-    const observed = await this.observeContainers(deployment.composePath);
+    const observed = await this.observeContainers(
+      deployment.id,
+      deployment.composePath,
+    );
     const observedById = new Map(
       observed.map((container) => [container.containerId, container]),
     );
@@ -58,25 +64,56 @@ export class ClassifyDeploymentServicesUseCase {
       if (container.status !== 'running') {
         return [`${service.composeServiceName} (${container.status})`];
       }
-      if (!(container.port > 0)) {
-        return [`${service.composeServiceName} (sin puerto asignado)`];
-      }
       return [];
     });
     if (rejected.length > 0) {
       throw new ConflictException(
-        `Todos los contenedores deben estar en running y tener un puerto asignado: ${rejected.join(', ')}`,
+        `Todos los contenedores deben estar en running: ${rejected.join(', ')}`,
       );
     }
 
-    const classified = await Promise.all(
-      deployment.services.map(async (service) => {
-        // Validado arriba: el contenedor existe, está en running y publica un puerto.
-        const container = observedById.get(service.id)!;
-        const { outcome } = await this.containerProbe.probe([container.port]);
-        return { container, serviceType: resolveServiceType(outcome) };
-      }),
+    // Inspeccionamos todos los contenedores del Compose para evaluar su uso mutuo.
+    const inspections = await this.runtime
+      .inspect(observed.map((container) => container.containerId))
+      .catch((error: unknown) => {
+        throw new ConflictException(
+          error instanceof Error ? error.message : String(error),
+        );
+      });
+    const inspectedIds = new Set(
+      inspections.map((container) => container.containerId),
     );
+    if (deployment.services.some((service) => !inspectedIds.has(service.id))) {
+      throw new ConflictException(
+        'No se pudieron inspeccionar todos los contenedores del despliegue',
+      );
+    }
+    const classifications = await this.classifier.classify(inspections);
+    const classifiedById = new Map(
+      classifications.map((result) => [
+        result.containerId,
+        result.classification,
+      ]),
+    );
+    const classified = deployment.services.map((service) => {
+      const container = observedById.get(service.id)!;
+      const result = classifiedById.get(service.id);
+      if (!result)
+        throw new ConflictException(
+          `No se recibió clasificación para ${service.composeServiceName}`,
+        );
+
+      if (result.kind !== 'resolved') {
+        this.logger.debug(
+          `Clasificación de ${service.composeServiceName}: ${result.kind}; ${result.evidence.join('; ')}`,
+        );
+      }
+      return {
+        container,
+        serviceType:
+          result.kind === 'resolved' ? result.type : ServiceType.UNKNOWN,
+      };
+    });
 
     const observedAt = new Date();
     await this.prisma.$transaction(
@@ -102,12 +139,16 @@ export class ClassifyDeploymentServicesUseCase {
   }
 
   private async observeContainers(
+    deploymentId: string,
     composePath: string,
   ): Promise<ContainerRuntimeService[]> {
     try {
-      return await this.runtime.list(dirname(composePath), composePath);
+      return await this.runtime.list(
+        dirname(composePath),
+        composePath,
+        deploymentRuntimeProjectName(deploymentId, composePath),
+      );
     } catch (error) {
-      // El runtime falla cuando un contenedor no publica puerto (p. ej. detenido).
       throw new ConflictException(
         error instanceof Error ? error.message : String(error),
       );

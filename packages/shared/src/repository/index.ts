@@ -1,7 +1,10 @@
 export type { CloneRepositoryRequest } from '@neoglito/shared/repository/requests/clone-repository.request';
 export type { CreateProjectRequest } from '@neoglito/shared/repository/requests/create-project.request';
 export type { CreateRepositoryRequest } from '@neoglito/shared/repository/requests/create-repository.request';
-export type { DeployComposeRequest } from '@neoglito/shared/repository/requests/deploy-compose.request';
+export type {
+  DeployComposeRequest,
+  DeployComposeEnvironmentVariable,
+} from '@neoglito/shared/repository/requests/deploy-compose.request';
 export type { InitProjectRequest } from '@neoglito/shared/repository/requests/init-project.request';
 export type { ProjectComposeFilesRequest } from '@neoglito/shared/repository/requests/project-compose-files.request';
 export type { UpdateProjectRequest } from '@neoglito/shared/repository/requests/update-project.request';
@@ -12,6 +15,7 @@ export type {
   DeploymentResponse,
   DeploymentServiceResponse,
 } from '@neoglito/shared/repository/responses/deployment.response';
+export type { DeploymentPortsResponse } from '@neoglito/shared/repository/responses/deployment-ports.response';
 export type { InitProjectResponse } from '@neoglito/shared/repository/responses/init-project.response';
 export type {
   ComposePort,

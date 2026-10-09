@@ -18,7 +18,7 @@ type YamlRecord = Record<string, unknown>;
 export class YamlComposeEnviromentVariableExtractService implements EnviromentVariableExtractPort {
   async analyze(filePath: string): Promise<ComposeAnalysis> {
     const fileContent = await readFile(filePath, 'utf8');
-    const composeFile = parse(fileContent) as unknown;
+    const composeFile = parse(fileContent, { merge: true }) as unknown;
     const environmentVariables = this.extractEnvironmentVariables(composeFile);
 
     return { environmentVariables };

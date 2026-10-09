@@ -255,6 +255,7 @@ describe('analysis consumers', () => {
       service,
       {} as ContainerRuntimePort,
       {} as PortReservationPort,
+      { prepare: vi.fn() },
     );
 
     await expect(

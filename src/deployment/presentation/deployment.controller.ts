@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
   Param,
   ParseIntPipe,
   Post,
@@ -25,6 +26,7 @@ import { ProjectAnalysisService } from '../../analisys/application/project-analy
 import type { AuthenticatedRequest } from '../../shared/presentation/http/authenticated-request.js';
 import type {
   DeploymentResponse,
+  DeploymentPortsResponse,
   InitProjectResponse,
   ProjectDockerFilesResponse,
 } from '@neoglito/shared/repository';
@@ -49,6 +51,7 @@ import {
   StopDeploymentUseCase,
 } from '../application/use-cases/deploy-compose.use-case.js';
 import { ClassifyDeploymentServicesUseCase } from '../application/use-cases/classify-deployment-services.use-case.js';
+import { GetDeploymentPortsUseCase } from '../application/use-cases/get-deployment-ports.use-case.js';
 
 @ApiTags('Deployment')
 @Controller('deployment')
@@ -56,12 +59,15 @@ import { ClassifyDeploymentServicesUseCase } from '../application/use-cases/clas
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'No autorizado' })
 export class DeploymentController {
+  private readonly logger = new Logger(DeploymentController.name);
+
   constructor(
     private readonly projectAnalysis: ProjectAnalysisService,
     private readonly deployCompose: DeployComposeUseCase,
     private readonly getDeployments: GetProjectDeploymentsUseCase,
     private readonly stopDeployment: StopDeploymentUseCase,
     private readonly classifyServices: ClassifyDeploymentServicesUseCase,
+    private readonly getDeploymentPorts: GetDeploymentPortsUseCase,
   ) {}
 
   @Post('docker_files')
@@ -87,17 +93,14 @@ export class DeploymentController {
     @Req() request: AuthenticatedRequest,
     @Body() dto: ProjectComposeFilesDto,
   ): Promise<ProjectDockerFilesResponse> {
-    return this.projectAnalysis.analyzeProject(
-      request.user.id,
-      dto.projectId,
-    );
+    return this.projectAnalysis.analyzeProject(request.user.id, dto.projectId);
   }
 
   @Post()
   @ApiOperation({
     summary: 'Desplegar un archivo Compose',
     description:
-      'Valida que el archivo Compose pertenezca al proyecto, construye las imágenes e inicia los contenedores.',
+      'Valida el archivo del proyecto, aplica los puertos y variables recibidos al YAML de un despliegue independiente, construye las imágenes e inicia los contenedores.',
   })
   @ApiBody({ type: DeployComposeDto })
   @ApiBadRequestResponse({
@@ -114,10 +117,18 @@ export class DeploymentController {
     @Req() request: AuthenticatedRequest,
     @Body() dto: DeployComposeDto,
   ): Promise<DeploymentResponse> {
+    this.logger.log(
+      `[deployment:backend] POST /deployment recibido ${JSON.stringify({ projectId: dto.projectId, composePath: dto.composePath, mirrorPorts: dto.mirrorPorts, receivedFields: Object.keys(dto), ports: dto.ports, environment: Array.isArray(dto.environment) ? dto.environment.map((variable) => ({ service: variable?.service, key: variable?.key })) : undefined })}`,
+    );
     const deployment = await this.deployCompose.execute(
       request.user.id,
       dto.projectId,
       dto.composePath,
+      {
+        environment: dto.environment,
+        ports: dto.ports,
+        mirrorPorts: dto.mirrorPorts,
+      },
     );
     return toDeploymentResponse(deployment);
   }
@@ -142,6 +153,53 @@ export class DeploymentController {
     return deployments.map(toDeploymentResponse);
   }
 
+  @Get(':deploymentId/ports')
+  @ApiOperation({
+    summary: 'Consultar puertos asignados a los contenedores del despliegue',
+  })
+  @ApiParam({ name: 'deploymentId', format: 'uuid' })
+  @ApiNotFoundResponse({ description: 'El despliegue no existe' })
+  @ApiSuccessResponseDoc({
+    status: 200,
+    description:
+      'Puertos guardados para el despliegue; null cuando no existe una asignación activa',
+    dataSchema: {
+      type: 'object',
+      required: [
+        'deploymentId',
+        'projectId',
+        'status',
+        'sourceComposePath',
+        'projectDirectory',
+        'services',
+      ],
+      properties: {
+        deploymentId: { type: 'string', format: 'uuid' },
+        projectId: { type: 'integer' },
+        status: { type: 'string' },
+        sourceComposePath: { type: 'string', nullable: true },
+        projectDirectory: { type: 'string', nullable: true },
+        services: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['containerId', 'composeServiceName', 'port'],
+            properties: {
+              containerId: { type: 'string' },
+              composeServiceName: { type: 'string' },
+              port: { type: 'integer', nullable: true, example: 3002 },
+            },
+          },
+        },
+      },
+    },
+  })
+  async ports(
+    @Param('deploymentId') deploymentId: string,
+  ): Promise<DeploymentPortsResponse> {
+    return this.getDeploymentPorts.execute(deploymentId);
+  }
+
   @Post(':deploymentId/stop')
   @ApiOperation({
     summary: 'Detener un despliegue',
@@ -163,14 +221,16 @@ export class DeploymentController {
   async stop(
     @Param('deploymentId') deploymentId: string,
   ): Promise<DeploymentResponse> {
-    return toDeploymentResponse(await this.stopDeployment.execute(deploymentId));
+    return toDeploymentResponse(
+      await this.stopDeployment.execute(deploymentId),
+    );
   }
 
   @Post(':deploymentId/classify')
   @ApiOperation({
     summary: 'Identificar la categoría de los contenedores',
     description:
-      'Sondea el puerto publicado de cada contenedor del despliegue para identificar su protocolo y guarda la categoría (ServiceType). Todos los contenedores deben estar en running y tener un puerto asignado.',
+      'Clasifica los contenedores por imagen, protocolo, configuración, comando y uso por otros servicios. Guarda el tipo resuelto o UNKNOWN cuando no puede determinarlo. Todos los contenedores deben estar en running; pueden no publicar puertos.',
   })
   @ApiParam({
     name: 'deploymentId',
@@ -180,7 +240,7 @@ export class DeploymentController {
   @ApiNotFoundResponse({ description: 'El despliegue no existe' })
   @ApiConflictResponse({
     description:
-      'Algún contenedor no está en running o no tiene un puerto asignado',
+      'El despliegue no tiene contenedores, alguno no está en running o no se pudo observar o inspeccionar',
   })
   @ApiSuccessResponseDoc({
     status: 201,
@@ -191,7 +251,12 @@ export class DeploymentController {
   async classify(
     @Param('deploymentId') deploymentId: string,
   ): Promise<DeploymentResponse> {
-    return toDeploymentResponse(await this.classifyServices.execute(deploymentId));
+    this.logger.log(
+      `[deployment:backend] POST classify recibido ${JSON.stringify({ deploymentId })}`,
+    );
+    return toDeploymentResponse(
+      await this.classifyServices.execute(deploymentId),
+    );
   }
 }
 
@@ -201,9 +266,7 @@ export class DeploymentController {
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'No autorizado' })
 export class ProjectDeploymentController {
-  constructor(
-    private readonly projectAnalysis: ProjectAnalysisService,
-  ) {}
+  constructor(private readonly projectAnalysis: ProjectAnalysisService) {}
 
   @Post('init')
   @ApiOperation({ description: 'Inicializa el analisis de un proyecto' })
@@ -212,7 +275,11 @@ export class ProjectDeploymentController {
     status: 200,
     description: 'Analisis inicializado correctamente',
     dataSchema: { $ref: getSchemaPath(InitProjectDataSchema) },
-    extraModels: [InitProjectDataSchema, ComposeAnalysisSchema, EnvironmentVariableSchema],
+    extraModels: [
+      InitProjectDataSchema,
+      ComposeAnalysisSchema,
+      EnvironmentVariableSchema,
+    ],
   })
   async initProject(
     @Req() request: AuthenticatedRequest,

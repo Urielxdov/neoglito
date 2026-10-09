@@ -10,17 +10,31 @@ import {
   StopDeploymentUseCase,
 } from './application/use-cases/deploy-compose.use-case.js';
 import { ClassifyDeploymentServicesUseCase } from './application/use-cases/classify-deployment-services.use-case.js';
+import { GetDeploymentPortsUseCase } from './application/use-cases/get-deployment-ports.use-case.js';
+import { DEPLOYMENT_COMPOSE_PORT } from './application/ports/deployment-compose.port.js';
+import { YamlDeploymentComposeService } from './infrastructure/compose/yaml-deployment-compose.service.js';
 import {
   DeploymentController,
   ProjectDeploymentController,
 } from './presentation/deployment.controller.js';
 
 @Module({
-  imports: [AuthModule, PrismaModule, AnalysisModule, ContainerModule, PortModule],
+  imports: [
+    AuthModule,
+    PrismaModule,
+    AnalysisModule,
+    ContainerModule,
+    PortModule,
+  ],
   controllers: [DeploymentController, ProjectDeploymentController],
   providers: [
+    {
+      provide: DEPLOYMENT_COMPOSE_PORT,
+      useClass: YamlDeploymentComposeService,
+    },
     DeployComposeUseCase,
     GetProjectDeploymentsUseCase,
+    GetDeploymentPortsUseCase,
     StopDeploymentUseCase,
     ClassifyDeploymentServicesUseCase,
   ],

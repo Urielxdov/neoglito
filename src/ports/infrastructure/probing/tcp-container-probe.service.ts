@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type {
   ContainerProbe,
   ContainerProbePort,
-} from '../application/container-probe.port.js';
+} from '../../application/container-probe.port.js';
 import { probeContainer } from './port-identification.js';
 import type { Protocol } from './protocol-probes.js';
 
@@ -32,7 +32,7 @@ export class TcpContainerProbeService implements ContainerProbePort {
   private readonly host =
     process.env.CONTAINER_PROBE_HOST ?? DEFAULT_PROBE_HOST;
 
-  probe(ports: readonly number[]): Promise<ContainerProbe> {
-    return probeContainer({ host: this.host, ports }, PROBE_ORDER);
+  probe(ports: readonly number[], host = this.host): Promise<ContainerProbe> {
+    return probeContainer({ host, ports }, PROBE_ORDER);
   }
 }

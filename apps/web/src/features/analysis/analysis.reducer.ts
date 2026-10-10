@@ -4,6 +4,7 @@ export type AnalyzeRepoStatus = 'pending' | 'succeeded' | 'failed';
 
 export interface AnalyzeRepoState {
   repositoryId: number;
+  label?: string;
   status: AnalyzeRepoStatus;
   deployment: DeploymentResponse | null;
   message: string | null;
@@ -13,6 +14,7 @@ export type AnalyzeTab = 'services' | 'relations';
 
 export interface AnalyzeState {
   projectId: number;
+  source?: 'saved';
   repos: AnalyzeRepoState[];
   collapsed: Record<number, boolean>;
   selectedKey: string | null;

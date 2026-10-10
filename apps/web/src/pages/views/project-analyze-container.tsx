@@ -4,15 +4,20 @@ import type { Project } from '@neoglito/web/features/projects/project.model';
 import { useProjectAnalysis } from '@neoglito/web/features/projects/hooks/use-project-analysis';
 import { useAnalysisDispatch } from '@neoglito/web/features/analysis/analysis.context';
 import type { AnalyzeState } from '@neoglito/web/features/analysis/analysis.reducer';
+import type { AnalysisAction } from '@neoglito/web/features/analysis/analysis.reducer';
+import type { Dispatch } from 'react';
 
 export function ProjectAnalyzeContainer({
   project,
   analyze,
+  dispatch,
 }: {
   project: Project;
   analyze: AnalyzeState;
+  dispatch?: Dispatch<AnalysisAction>;
 }) {
-  const analysisDispatch = useAnalysisDispatch();
+  const sessionDispatch = useAnalysisDispatch();
+  const analysisDispatch = dispatch ?? sessionDispatch;
   const { closeAnalysis } = useProjectAnalysis();
   const repositories = useActiveProjectRepositories();
 

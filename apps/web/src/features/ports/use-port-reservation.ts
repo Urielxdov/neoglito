@@ -1,23 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { portsQueryKey, usePorts } from '@neoglito/web/features/ports/use-ports';
-import { portService } from '@neoglito/web/features/ports/port.service';
 import {
-  ownerReservationKey,
-  parseSinglePort,
-} from '@neoglito/web/features/ports/port-reservations';
+  portsQueryKey,
+  usePorts,
+} from '@neoglito/web/features/ports/use-ports';
+import { parseSinglePort } from '@neoglito/web/features/ports/port-reservations';
+import { schedulePortReservation } from '@neoglito/web/features/ports/port-reservation-attempt';
+import type { PortReservationState } from '@neoglito/web/features/ports/port-reservation-attempt';
+export type { PortReservationState } from '@neoglito/web/features/ports/port-reservation-attempt';
 
 const DEBOUNCE_MS = 600;
 
-export type PortReservationState =
-  | { status: 'idle' }
-  | { status: 'pending' }
-  | { status: 'reserved'; ownerKey: string }
-  | { status: 'failed'; message: string };
-
 /**
  * Reserva en el servidor el puerto individual escrito en un campo.
- * - Espera a que el usuario deje de escribir antes de reservar.
+ * - Valida el primer valor inmediatamente; espera 600 ms tras editarlo.
  * - Si el valor cambia, se borra o el campo se desmonta, libera la reserva.
  * - Si la reserva expira en el servidor, la vuelve a pedir.
  * - No intenta reservar si `blocked` (otro propietario ya tiene el puerto).
@@ -33,6 +29,7 @@ export function usePortReservation(
   const { reservedPorts, isFetching, isError } = usePorts();
   const [attempt, setAttempt] = useState(0);
   const blockedRef = useRef(blocked);
+  const firstKeyRef = useRef<string | null>(null);
   const port = parseSinglePort(value);
 
   // El resultado se guarda junto a la clave del puerto al que pertenece; si el
@@ -45,8 +42,15 @@ export function usePortReservation(
   const state = result.key === key ? result.state : IDLE;
 
   useEffect(() => {
+    const wasBlocked = blockedRef.current;
     blockedRef.current = blocked;
-  }, [blocked]);
+    // If reservations finished loading after the timer fired, retry now.
+    // A reservation already held by this field must not be released merely
+    // because it appears in GET /port.
+    if (wasBlocked && !blocked && state.status === 'idle') {
+      setAttempt((n) => n + 1);
+    }
+  }, [blocked, state.status]);
 
   if (
     state.status === 'reserved' &&
@@ -61,50 +65,20 @@ export function usePortReservation(
 
   useEffect(() => {
     if (port === null || key === null) return;
+    firstKeyRef.current ??= key;
 
-    let cancelled = false;
-    let reserved = false;
-    const publish = (next: PortReservationState) => {
-      if (!cancelled) setResult({ key, state: next });
-    };
-    const refreshPorts = () =>
-      queryClient.invalidateQueries({ queryKey: portsQueryKey });
-    const release = () =>
-      portService.release(projectId, port).then(refreshPorts);
-
-    const timer = setTimeout(async () => {
-      if (blockedRef.current) return;
-
-      publish({ status: 'pending' });
-      const response = await portService.reserve({ projectId, port });
-      if (!response.success || !response.data) {
-        publish({
-          status: 'failed',
-          message:
-            response.error?.message ?? `No se pudo reservar el puerto ${port}`,
-        });
-        return;
-      }
-
-      reserved = true;
-      if (cancelled) {
-        void release();
-        return;
-      }
-
-      // Se espera a que la lista de reservas incluya la nueva para no
-      // confundirla con una reserva expirada.
-      await refreshPorts();
-      publish({
-        status: 'reserved',
-        ownerKey: ownerReservationKey(response.data.ownerId),
-      });
-    }, DEBOUNCE_MS);
+    const cancel = schedulePortReservation({
+      projectId,
+      port,
+      delayMs: key === firstKeyRef.current ? 0 : DEBOUNCE_MS,
+      isBlocked: () => blockedRef.current,
+      publish: (next) => setResult({ key, state: next }),
+      refreshPorts: () =>
+        queryClient.invalidateQueries({ queryKey: portsQueryKey }),
+    });
 
     return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      if (reserved) void release();
+      cancel();
       setResult((current) =>
         current.key === key ? { key: null, state: IDLE } : current,
       );

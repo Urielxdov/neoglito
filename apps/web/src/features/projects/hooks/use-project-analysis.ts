@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { DeployComposeRequest } from '@neoglito/web/shared/api/contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { portsQueryKey } from '@neoglito/web/features/ports/use-ports';
@@ -11,11 +12,10 @@ import { createDeploymentRequest } from '@neoglito/web/features/projects/deploym
 import { deploymentPortsQueryKey } from '@neoglito/web/features/projects/deployment-assigned-ports';
 import { useDeploysState } from '@neoglito/web/features/deploys/deploys.context';
 import { useAnalysisDispatch } from '@neoglito/web/features/analysis/analysis.context';
-import { useProjectsDispatch } from '@neoglito/web/features/projects/projects.context';
 
 export function useProjectAnalysis() {
   const queryClient = useQueryClient();
-  const projectsDispatch = useProjectsDispatch();
+  const navigate = useNavigate();
   const analysisDispatch = useAnalysisDispatch();
   const { deployPaths, deployPorts, deployEnv } = useDeploysState();
   const project = useActiveProject();
@@ -31,12 +31,12 @@ export function useProjectAnalysis() {
       }))
       .filter((target) => target.path.length > 0);
 
-    projectsDispatch({ type: 'analyze-phase-entered' });
     analysisDispatch({
       type: 'analyze-opened',
       projectId: project.id,
       repositoryIds: targets.map((target) => target.repository.id),
     });
+    navigate(`/projects/${project.id}/analysis`);
 
     for (const { repository, path } of targets) {
       const key = `${project.id}:${repository.id}`;
@@ -114,15 +114,14 @@ export function useProjectAnalysis() {
     deployPorts,
     deployEnv,
     project,
-    projectsDispatch,
+    navigate,
     queryClient,
     repositories,
   ]);
 
   const closeAnalysis = useCallback(() => {
-    analysisDispatch({ type: 'analyze-closed' });
-    projectsDispatch({ type: 'analyze-phase-left' });
-  }, [analysisDispatch, projectsDispatch]);
+    if (project) navigate(`/projects/${project.id}/deploy`);
+  }, [navigate, project]);
 
   return { startAnalysis, closeAnalysis };
 }

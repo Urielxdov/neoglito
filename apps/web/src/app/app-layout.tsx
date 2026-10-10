@@ -1,17 +1,26 @@
-import { useRef } from 'react'
-import { Moon, Sun } from 'lucide'
-import { Outlet, useLocation } from 'react-router-dom'
-import { AppIcon } from '@neoglito/web/shared/components/app-icon'
-import { useTheme } from '@neoglito/web/shared/hooks/use-theme'
-import { NeoglitoLogo } from '@neoglito/web/shared/branding/neoglito-logo'
-import { useNeoglitoSplash } from '@neoglito/web/shared/branding/use-neoglito-splash'
+import { useRef } from 'react';
+import { Moon, Sun } from 'lucide';
+import { Outlet, useLocation } from 'react-router-dom';
+import { AppIcon } from '@neoglito/web/shared/components/app-icon';
+import { useTheme } from '@neoglito/web/shared/hooks/use-theme';
+import { NeoglitoLogo } from '@neoglito/web/shared/branding/neoglito-logo';
+import { useNeoglitoSplash } from '@neoglito/web/shared/branding/use-neoglito-splash';
 
 export function AppLayout() {
-  const { isDark, toggleTheme } = useTheme()
-  const { pathname } = useLocation()
-  const pageTitle = pathname === '/authentication' ? 'Conectar cuenta' : 'Repositorios y proyectos'
-  const logoRef = useRef<HTMLSpanElement>(null)
-  const logoDocked = useNeoglitoSplash(logoRef, isDark)
+  const { isDark, toggleTheme } = useTheme();
+  const { pathname } = useLocation();
+  const pageTitle =
+    pathname === '/authentication'
+      ? 'Conectar cuenta'
+      : pathname === '/repositories'
+        ? 'Repositorios'
+        : pathname.endsWith('/analysis')
+          ? 'Análisis del proyecto'
+          : pathname.startsWith('/projects/')
+            ? 'Configuración del proyecto'
+            : 'Proyectos';
+  const logoRef = useRef<HTMLSpanElement>(null);
+  const logoDocked = useNeoglitoSplash(logoRef, isDark);
 
   return (
     <div
@@ -24,8 +33,12 @@ export function AppLayout() {
             ref={logoRef}
             className={`shrink-0 text-[24px] ${logoDocked ? '' : 'invisible'}`}
           />
-          <span className="hidden text-sm text-[#8c98ac] dark:text-[#7a8699] sm:inline">/</span>
-          <span className="truncate text-sm text-[#51607a] dark:text-[#a7b4c8]">{pageTitle}</span>
+          <span className="hidden text-sm text-[#8c98ac] dark:text-[#7a8699] sm:inline">
+            /
+          </span>
+          <span className="truncate text-sm text-[#51607a] dark:text-[#a7b4c8]">
+            {pageTitle}
+          </span>
         </div>
         <button
           type="button"
@@ -41,5 +54,5 @@ export function AppLayout() {
         <Outlet />
       </div>
     </div>
-  )
+  );
 }

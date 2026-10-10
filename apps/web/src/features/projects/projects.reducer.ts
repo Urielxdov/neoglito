@@ -1,4 +1,3 @@
-export type ProjectsPhase = 'list' | 'detail' | 'analyze';
 export type ProjectsDetailTab = 'deploy' | 'routes' | 'repos' | 'general';
 
 export interface CreationProgress {
@@ -12,11 +11,7 @@ export interface ProjectsState {
   submitting: boolean;
   newName: string;
   newDescription: string;
-  openId: number | null;
-  phase: ProjectsPhase;
-  activeId: number | null;
   progress: CreationProgress | null;
-  detailTab: ProjectsDetailTab;
   editName: string | null;
   editDescription: string | null;
   editSubmitting: boolean;
@@ -34,31 +29,20 @@ export type ProjectsAction =
   | { type: 'creation-submitting' }
   | { type: 'creation-progress'; done: number; total: number; label: string }
   | { type: 'creation-failed' }
-  | { type: 'creation-succeeded'; projectId: number }
-  | { type: 'project-opened'; id: number }
-  | { type: 'project-closed' }
-  | { type: 'detail-opened'; id: number }
-  | { type: 'detail-closed' }
-  | { type: 'detail-tab-changed'; tab: ProjectsDetailTab }
+  | { type: 'creation-succeeded' }
   | { type: 'edit-name-changed'; name: string }
   | { type: 'edit-description-changed'; description: string }
   | { type: 'edit-reset' }
   | { type: 'edit-submitting' }
   | { type: 'edit-succeeded' }
-  | { type: 'edit-failed'; message: string }
-  | { type: 'analyze-phase-entered' }
-  | { type: 'analyze-phase-left' };
+  | { type: 'edit-failed'; message: string };
 
 export const initialProjectsState: ProjectsState = {
   creating: false,
   submitting: false,
   newName: '',
   newDescription: '',
-  openId: null,
-  phase: 'list',
-  activeId: null,
   progress: null,
-  detailTab: 'deploy',
   editName: null,
   editDescription: null,
   editSubmitting: false,
@@ -112,42 +96,6 @@ export function projectsReducer(
         newName: '',
         newDescription: '',
         progress: null,
-        phase: 'detail',
-        activeId: action.projectId,
-      };
-    case 'project-opened':
-      return { ...state, openId: action.id };
-    case 'project-closed':
-      return { ...state, openId: null };
-    case 'detail-opened':
-      return {
-        ...state,
-        phase: 'detail',
-        activeId: action.id,
-        openId: null,
-        detailTab: 'deploy',
-        editName: null,
-        editDescription: null,
-        editSaved: false,
-        editMessage: null,
-      };
-    case 'detail-closed':
-      return {
-        ...state,
-        phase: 'list',
-        activeId: null,
-        detailTab: 'deploy',
-        editName: null,
-        editDescription: null,
-        editSaved: false,
-        editMessage: null,
-      };
-    case 'detail-tab-changed':
-      return {
-        ...state,
-        detailTab: action.tab,
-        editSaved: false,
-        editMessage: null,
       };
     case 'edit-name-changed':
       return { ...state, editName: action.name, editSaved: false };
@@ -178,9 +126,5 @@ export function projectsReducer(
       };
     case 'edit-failed':
       return { ...state, editSubmitting: false, editMessage: action.message };
-    case 'analyze-phase-entered':
-      return { ...state, phase: 'analyze' };
-    case 'analyze-phase-left':
-      return { ...state, phase: 'detail', detailTab: 'deploy' };
   }
 }

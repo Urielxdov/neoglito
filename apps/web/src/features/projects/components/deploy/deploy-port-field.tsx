@@ -2,7 +2,10 @@ import { Check, X } from 'lucide';
 import type { DeployComposePort } from '@neoglito/web/features/deploys/deploys.reducer';
 import { AppIcon } from '@neoglito/web/shared/components/app-icon';
 import { usePortReservation } from '@neoglito/web/features/ports/use-port-reservation';
-import { checkPublishedPort } from '@neoglito/web/features/ports/port-reservations';
+import {
+  checkPublishedPort,
+  parseSinglePort,
+} from '@neoglito/web/features/ports/port-reservations';
 import type {
   PortCheck,
   PortReservation,
@@ -57,36 +60,60 @@ export function DeployPortField({
 }: DeployPortFieldProps) {
   const isAssigned = assignedPort !== null;
   const blocked = disabled || isAssigned || !canCheckPorts;
-  const check = !blocked
+  const initialCheck = !blocked
     ? checkPublishedPort(port.publishedPort, reservations)
     : NO_CHECK;
   const reservation = usePortReservation(
     projectId,
     blocked ? null : port.publishedPort,
-    check.status === 'reserved',
+    initialCheck.status === 'reserved',
   );
+  const check = !blocked
+    ? checkPublishedPort(
+        port.publishedPort,
+        reservations.filter(
+          (entry) =>
+            reservation.status !== 'reserved' ||
+            entry.ownerKey !== reservation.ownerKey,
+        ),
+      )
+    : NO_CHECK;
+  const hasConflict = check.status === 'reserved';
 
   const pending = reservation.status === 'pending';
+  const checking =
+    !blocked &&
+    check.status === 'free' &&
+    parseSinglePort(port.publishedPort) !== null &&
+    (reservation.status === 'idle' || pending);
 
   let tone: Tone = 'neutral';
   let message: string | null = null;
   if (isAssigned) {
     tone = 'green';
     message = 'Puerto asignado al contenedor';
-  } else if (reservation.status === 'reserved') {
-    tone = 'green';
-    message = 'Puerto reservado';
-  } else if (pending) {
-    message = 'Reservando puerto…';
   } else if (check.status === 'reserved') {
     tone = 'amber';
-    message = reservedMessage(check);
+    message = `No disponible · ${reservedMessage(check)}`;
+  } else if (reservation.status === 'reserved') {
+    tone = 'green';
+    message = 'Puerto disponible · reservado';
+  } else if (pending) {
+    message = 'Comprobando disponibilidad…';
+  } else if (blocked) {
+    message = 'Esperando la consulta de puertos…';
   } else if (reservation.status === 'failed') {
     tone = 'red';
     message = `✕ ${reservation.message}`;
+  } else if (check.status === 'invalid') {
+    tone = 'red';
+    message = 'Ingresa un puerto entre 1 y 65535 o un rango válido';
   } else if (check.status === 'free') {
-    tone = 'green';
-    message = 'Puerto no reservado por Neoglito';
+    if (parseSinglePort(port.publishedPort) === null) {
+      message = 'Rango sin reservas en Neoglito';
+    } else {
+      message = 'Comprobando disponibilidad…';
+    }
   }
 
   return (
@@ -110,23 +137,23 @@ export function DeployPortField({
             });
             onChange(publishedPort);
           }}
-          readOnly={pending}
-          aria-busy={pending}
+          aria-busy={checking}
           placeholder={port.mappingType === 'range' ? '8000-8002' : '5173'}
           inputMode="numeric"
           className={`h-8 w-[112px] rounded-md border bg-white px-2 font-mono text-[12px] text-[#16202e] outline-none placeholder:text-[#a7b4c8] disabled:cursor-not-allowed disabled:opacity-70 dark:bg-[#0c121d] dark:text-[#e8edf6] ${BORDER[tone]} ${
-            pending ? 'cursor-wait opacity-60' : ''
+            checking ? 'opacity-60' : ''
           }`}
         />
         <span className="grid h-4 w-4 place-items-center">
-          {pending && (
+          {checking && (
             <span
               role="status"
-              aria-label="Reservando puerto"
+              aria-label="Comprobando disponibilidad"
               className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#c8d0dc] border-t-[#2257c4] dark:border-[#35435a] dark:border-t-[#5b8df5]"
             />
           )}
-          {(isAssigned || reservation.status === 'reserved') && (
+          {(isAssigned ||
+            (reservation.status === 'reserved' && !hasConflict)) && (
             <span className={TEXT.green}>
               <AppIcon icon={Check} size={14} strokeWidth={2.6} />
             </span>
@@ -139,7 +166,11 @@ export function DeployPortField({
         </span>
       </label>
       {message && (
-        <span className={`basis-full text-[11.5px] ${TEXT[tone]}`}>
+        <span
+          role="status"
+          aria-live="polite"
+          className={`basis-full text-[11.5px] ${TEXT[tone]}`}
+        >
           {message}
         </span>
       )}

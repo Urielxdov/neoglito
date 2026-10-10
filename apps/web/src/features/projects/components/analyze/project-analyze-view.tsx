@@ -40,11 +40,14 @@ export function ProjectAnalyzeView({
   const pct = total > 0 ? Math.round((settled / total) * 100) : 0;
   const done = settled === total;
 
-  const stateLabel = !done
-    ? 'Analizando'
-    : failed > 0
-      ? 'Con errores'
-      : 'Listo';
+  const stateLabel =
+    analyze.source === 'saved'
+      ? 'Guardado'
+      : !done
+        ? 'Analizando'
+        : failed > 0
+          ? 'Con errores'
+          : 'Listo';
   const stateFg = !done
     ? 'text-[#2257c4] dark:text-[#5b8df5]'
     : failed > 0
@@ -81,6 +84,9 @@ export function ProjectAnalyzeView({
   const selectedRepository = repositories.find(
     (repository) => repository.id === selectedRepositoryId,
   );
+  const selectedGroupName =
+    selectedAnalyzeRepo?.label ??
+    (selectedRepository ? shortName(selectedRepository.name) : null);
   const selectedService =
     selectedAnalyzeRepo?.deployment && selectedServiceIndex !== null
       ? selectedAnalyzeRepo.deployment.services[selectedServiceIndex]
@@ -88,9 +94,9 @@ export function ProjectAnalyzeView({
 
   const allServices = analyze.repos.flatMap((repo) => {
     const repository = repositories.find((r) => r.id === repo.repositoryId);
-    const repositoryName = repository
-      ? shortName(repository.name)
-      : `#${repo.repositoryId}`;
+    const repositoryName =
+      repo.label ??
+      (repository ? shortName(repository.name) : `#${repo.repositoryId}`);
 
     return (
       repo.deployment?.services.map((service, serviceIndex) => ({
@@ -127,9 +133,11 @@ export function ProjectAnalyzeView({
             {project.name}
           </span>
           <span className="text-[12.5px] text-[#8c98ac] dark:text-[#7a8699]">
-            {done
-              ? 'Todos los despliegues finalizaron.'
-              : `Desplegando · ${settled} de ${total} repositorios listos`}
+            {analyze.source === 'saved'
+              ? 'Análisis guardado · estados de la última observación.'
+              : done
+                ? 'Todos los despliegues finalizaron.'
+                : `Desplegando · ${settled} de ${total} repositorios listos`}
           </span>
         </span>
         <div className="h-1 min-w-[140px] flex-[0_1_220px] overflow-hidden rounded-full bg-[#e6eaf0] dark:bg-[#253044]">
@@ -174,7 +182,7 @@ export function ProjectAnalyzeView({
           <aside className="max-w-[320px] min-w-0 flex-1 basis-[260px] overflow-hidden rounded-2xl border border-[#e6eaf0] bg-white shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:border-[#253044] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
             <div className="flex items-center justify-between gap-2.5 border-b border-[#e6eaf0] px-[18px] py-3.5 dark:border-[#253044]">
               <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#8c98ac] dark:text-[#7a8699]">
-                Repositorios
+                {analyze.source === 'saved' ? 'Despliegues' : 'Repositorios'}
               </span>
               <span className="text-[12px] text-[#8c98ac] dark:text-[#7a8699]">
                 {total}
@@ -197,9 +205,10 @@ export function ProjectAnalyzeView({
                 <AnalyzeRepoGroup
                   key={repo.repositoryId}
                   repositoryName={
-                    repository
+                    repo.label ??
+                    (repository
                       ? shortName(repository.name)
-                      : `#${repo.repositoryId}`
+                      : `#${repo.repositoryId}`)
                   }
                   status={repo.status}
                   message={repo.message}
@@ -216,7 +225,7 @@ export function ProjectAnalyzeView({
 
           <section className="min-w-0 flex-[1_1_420px] overflow-hidden rounded-2xl border border-[#e6eaf0] bg-white shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:border-[#253044] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">
             {selectedService &&
-            selectedRepository &&
+            selectedGroupName &&
             selectedAnalyzeRepo?.deployment ? (
               <>
                 <div className="flex flex-wrap items-center gap-3.5 border-b border-[#e6eaf0] px-[22px] py-[18px] dark:border-[#253044]">
@@ -225,7 +234,7 @@ export function ProjectAnalyzeView({
                       {selectedService.composeServiceName}
                     </span>
                     <span className="block font-mono text-[12px] text-[#8c98ac] dark:text-[#7a8699]">
-                      {shortName(selectedRepository.name)}
+                      {selectedGroupName}
                     </span>
                   </span>
                   <AnalyzeServiceTypeBadge type={selectedService.serviceType} />
@@ -272,7 +281,7 @@ export function ProjectAnalyzeView({
 
                 <div className="flex flex-col gap-2.5 px-[22px] py-[18px]">
                   <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#8c98ac] dark:text-[#7a8699]">
-                    Servicios de {shortName(selectedRepository.name)}
+                    Servicios de {selectedGroupName}
                   </span>
                   <div className="flex flex-col gap-1.5 rounded-lg border border-[#e0e6ef] p-2 font-mono text-[12.5px] dark:border-[#253044]">
                     {selectedAnalyzeRepo.deployment.services.map(

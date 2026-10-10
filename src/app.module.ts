@@ -9,6 +9,7 @@ import { RepositoryModule } from './repository/repository.module.js';
 import { DeploymentModule } from './deployment/deployment.module.js';
 import { ContainerModule } from './container/container.module.js';
 import { PortModule } from './ports/port.module.js';
+import { StartupModule } from './startup/startup.module.js';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { PortModule } from './ports/port.module.js';
     DeploymentModule,
     ContainerModule,
     PortModule,
+    StartupModule,
   ],
   controllers: [AppController],
   providers: [AppService, RestoreDeploymentPortReservationsService],

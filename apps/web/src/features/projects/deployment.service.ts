@@ -74,4 +74,14 @@ export const deploymentService = {
       `/deployment/project/${projectId}`,
     );
   },
+
+  async getSavedAnalysis(projectId: number): Promise<DeploymentResponse[]> {
+    const response = await deploymentService.listByProject(projectId);
+    if (!response.success || !response.data) {
+      throw new Error(
+        response.error?.message ?? 'No se pudo recuperar el análisis guardado.',
+      );
+    }
+    return response.data;
+  },
 };

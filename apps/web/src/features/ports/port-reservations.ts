@@ -21,6 +21,7 @@ export function parseSinglePort(value: string | null): number | null {
 export interface PortReservation {
   port: number;
   owner: string;
+  ownerKey?: string;
 }
 
 export type PortCheck =
@@ -33,6 +34,8 @@ function describeOwner(ownerKey: string): string {
   const ownerId = ownerKey.startsWith(OWNER_PREFIX)
     ? ownerKey.slice(OWNER_PREFIX.length)
     : ownerKey;
+  const hostContainer = /^host:docker:([^:]+):port:\d+$/.exec(ownerId);
+  if (hostContainer) return `el contenedor ${hostContainer[1]}`;
   const deployment = DEPLOYMENT_OWNER.exec(ownerId);
   if (deployment) return `el despliegue ${deployment[1].slice(0, 8)}`;
 
@@ -48,7 +51,7 @@ export function parseReservations(
   return Object.entries(reservations).flatMap(([ownerKey, portKey]) => {
     const port = Number(portKey.split(':').pop());
     return Number.isInteger(port)
-      ? [{ port, owner: describeOwner(ownerKey) }]
+      ? [{ port, owner: describeOwner(ownerKey), ownerKey }]
       : [];
   });
 }

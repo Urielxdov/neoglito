@@ -20,6 +20,7 @@ interface ProjectDetailViewProps {
   onTabChange(tab: ProjectsDetailTab): void;
   onBack(): void;
   onAnalyze(): void;
+  composeReady?: boolean;
 }
 
 export function ProjectDetailView({
@@ -29,6 +30,7 @@ export function ProjectDetailView({
   onTabChange,
   onBack,
   onAnalyze,
+  composeReady = true,
 }: ProjectDetailViewProps) {
   const { total, readyCount, allReady } = useDeployReadiness(
     project,
@@ -167,7 +169,7 @@ export function ProjectDetailView({
         </span>
         <button
           type="button"
-          disabled={!allReady}
+          disabled={!allReady || !composeReady}
           onClick={onAnalyze}
           className="h-10 rounded-lg bg-[#2257c4] px-[18px] text-[13px] font-semibold text-white shadow-[0_1px_2px_rgba(34,87,196,0.35)] enabled:hover:bg-[#1c489f] disabled:cursor-not-allowed disabled:opacity-50"
         >

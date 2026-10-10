@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger } from '@nestjs/common'
+import { HOST_PORT_USAGE_PORT, type HostPortUsagePort } from '../../application/host-port-usage.port.js'
 import type { PortReservationsResponse } from '@neoglito/shared/ports'
 import { createServer } from 'node:net'
 import type { Server } from 'node:net'
@@ -58,7 +59,10 @@ const RELEASE_SCRIPT = `
 export class RedisPortReservationService implements PortReservationPort {
   private readonly logger = new Logger(RedisPortReservationService.name)
   private readonly heldPorts = new Map<string, HeldPort>()
-  constructor(private readonly redis: RedisConnection) {}
+  constructor(
+    private readonly redis: RedisConnection,
+    @Inject(HOST_PORT_USAGE_PORT) private readonly hostPortUsage: HostPortUsagePort,
+  ) {}
 
   async getAll(): Promise<PortReservationsResponse> {
     const reservations: PortReservationsResponse = {}
@@ -67,6 +71,7 @@ export class RedisPortReservationService implements PortReservationPort {
       MATCH: 'port-reservation:owner:*',
       COUNT: 100,
     })) {
+      if (ownerKeys.length === 0) continue
       const ports = await this.redis.client.mGet(ownerKeys)
 
       ownerKeys.forEach((ownerKey, index) => {
@@ -77,6 +82,9 @@ export class RedisPortReservationService implements PortReservationPort {
       })
     }
 
+    for (const { port, ownerId } of await this.hostPortUsage.getPublishedPorts()) {
+      reservations[this.ownerKey(ownerId)] = this.portKey(port)
+    }
     return reservations
   }
 
@@ -147,6 +155,7 @@ export class RedisPortReservationService implements PortReservationPort {
     const portKey = this.portKey(port)
     const ownerKey = this.ownerKey(ownerId)
 
+    if (!(await this.hostPortUsage.isPortAvailable(port))) return null
     const server = await this.openPortHold(port)
     if (!server) {
       this.logger.error(
@@ -252,7 +261,8 @@ export class RedisPortReservationService implements PortReservationPort {
    * @param port puerto a identificar
    * @returns boolean - indicador si el puerto esta disponible
    */
-  private isPortAvailable(port: number): Promise<boolean> {
+  private async isPortAvailable(port: number): Promise<boolean> {
+    if (!(await this.hostPortUsage.isPortAvailable(port))) return false
     return new Promise((resolve) => {
       const server = createServer()
       server.once('error', () => resolve(false))

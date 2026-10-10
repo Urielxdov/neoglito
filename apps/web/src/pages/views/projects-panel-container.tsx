@@ -1,6 +1,6 @@
 import { ProjectsPanel } from '@neoglito/web/features/projects/components/list/projects-panel';
 import { useProjectCreation } from '@neoglito/web/features/projects/hooks/use-project-creation';
-import { useProjectOpen } from '@neoglito/web/features/projects/hooks/use-project-open';
+import { useNavigate } from 'react-router-dom';
 import { useProjectCreationStatus } from '@neoglito/web/features/projects/hooks/use-project-selectors';
 import { useProjects } from '@neoglito/web/features/projects/hooks/use-projects';
 import { useSelectedRepositories } from '@neoglito/web/features/repositories/use-repository-selectors';
@@ -11,18 +11,13 @@ import {
 import { shortName } from '@neoglito/web/features/repositories/repository-name';
 
 export function ProjectsPanelContainer() {
-  const {
-    allProjects,
-    isLoading,
-    isError,
-    error,
-  } = useProjects();
+  const { allProjects, isLoading, isError, error } = useProjects();
   const projectsState = useProjectsState();
   const projectsDispatch = useProjectsDispatch();
   const selectedRepositories = useSelectedRepositories();
   const { nameTaken, canCreateProject } = useProjectCreationStatus();
   const { handleCreateProject } = useProjectCreation();
-  const { handleOpenProject } = useProjectOpen();
+  const navigate = useNavigate();
 
   const projectsError = isError
     ? (error ?? 'No fue posible cargar los proyectos.')
@@ -49,7 +44,7 @@ export function ProjectsPanelContainer() {
       }
       onCancelCreation={() => projectsDispatch({ type: 'creation-cancelled' })}
       onCreateProject={() => void handleCreateProject()}
-      onOpenProject={(id) => void handleOpenProject(id)}
+      onOpenProject={(id) => navigate(`/projects/${id}/deploy`)}
     />
   );
 }

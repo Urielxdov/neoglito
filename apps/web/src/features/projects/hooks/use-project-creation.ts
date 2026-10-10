@@ -1,19 +1,24 @@
 import { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useProjects } from '@neoglito/web/features/projects/hooks/use-projects';
 import { useProjectCreationStatus } from '@neoglito/web/features/projects/hooks/use-project-selectors';
 import { useSelectedRepositories } from '@neoglito/web/features/repositories/use-repository-selectors';
-import { repositoryService } from "@neoglito/web/features/repositories/repository.service";
+import { repositoryService } from '@neoglito/web/features/repositories/repository.service';
 import { useDeploysDispatch } from '@neoglito/web/features/deploys/deploys.context';
-import { useProjectsDispatch, useProjectsState } from '@neoglito/web/features/projects/projects.context';
+import {
+  useProjectsDispatch,
+  useProjectsState,
+} from '@neoglito/web/features/projects/projects.context';
 import { useRepositoriesDispatch } from '@neoglito/web/features/repositories/repositories.context';
-import { projectService } from "@neoglito/web/features/projects/project.service";
-import { shortName } from "@neoglito/web/features/repositories/repository-name";
+import { projectService } from '@neoglito/web/features/projects/project.service';
+import { shortName } from '@neoglito/web/features/repositories/repository-name';
 import {
   getDockerFileCandidatesByRepositoryId,
   getDockerFilePathsByRepositoryId,
-} from "@neoglito/web/features/projects/compose.helpers";
+} from '@neoglito/web/features/projects/compose.helpers';
 
 export function useProjectCreation() {
+  const navigate = useNavigate();
   const { refresh: loadProjects } = useProjects();
   const { newName, newDescription } = useProjectsState();
   const projectsDispatch = useProjectsDispatch();
@@ -32,8 +37,9 @@ export function useProjectCreation() {
     if (selectedRepositories.length > 0) {
       projectsDispatch({ type: 'panel-error-set', message: null });
       projectsDispatch({ type: 'creation-opened' });
+      navigate('/projects');
     }
-  }, [projectsDispatch, selectedRepositories.length]);
+  }, [navigate, projectsDispatch, selectedRepositories.length]);
 
   const handleCreateProject = useCallback(async () => {
     if (!canCreateProject) return;
@@ -133,15 +139,17 @@ export function useProjectCreation() {
         initResponse.data.dockerComposePaths,
       ),
     });
-    projectsDispatch({ type: 'creation-succeeded', projectId });
+    projectsDispatch({ type: 'creation-succeeded' });
     repositoriesDispatch({ type: 'selection-cleared' });
     await loadProjects();
+    navigate(`/projects/${projectId}/deploy`);
   }, [
     canCreateProject,
     deploysDispatch,
     loadProjects,
     newDescription,
     newName,
+    navigate,
     projectsDispatch,
     repositoriesDispatch,
     selectedRepositories,

@@ -8,12 +8,15 @@ import { TcpContainerProbeService } from './infrastructure/probing/tcp-container
 import { ContainerModule } from '../container/container.module.js';
 import { CONTAINER_CLASSIFICATION_PORT } from './application/container-classification.port.js';
 import { ContainerClassificationService } from './infrastructure/classification/container-classification.service.js';
+import { HOST_PORT_USAGE_PORT } from './application/host-port-usage.port.js';
+import { DockerHostPortUsageService } from './infrastructure/probing/docker-host-port-usage.service.js';
 
 @Module({
   imports: [CacheModule, ContainerModule],
   controllers: [PortController],
   providers: [
     RedisPortReservationService,
+    { provide: HOST_PORT_USAGE_PORT, useClass: DockerHostPortUsageService },
     TcpContainerProbeService,
     ContainerClassificationService,
     {

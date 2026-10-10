@@ -14,6 +14,7 @@ export class RedisCache implements CachePort {
     const entries: Array<[string, string]> = [];
 
     for await (const keys of this.redis.client.scanIterator({ COUNT: 100 })) {
+      if (keys.length === 0) continue;
       const values = await this.redis.client.mGet(keys);
 
       keys.forEach((key, index) => {

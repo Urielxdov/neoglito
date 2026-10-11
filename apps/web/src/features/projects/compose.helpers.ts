@@ -63,18 +63,33 @@ export function getDockerFilePathsByRepositoryId(
   repositories: Repository[],
   clonedRepositoryPaths: string[],
   dockerFilesPath: string[],
+  composeAnalyses: ProjectDockerFilesResponse['composeAnalyses'] = [],
 ): Record<number, string> {
   const candidatesByRepositoryId = getDockerFileCandidatesByRepositoryId(
     repositories,
     clonedRepositoryPaths,
     dockerFilesPath,
   );
+  const normalizedComposeAnalyses = composeAnalyses.map((analysis) => ({
+    normalized: normalizePath(analysis.dockerComposePath),
+    hasData:
+      analysis.environmentVariables.length > 0 || analysis.ports.length > 0,
+  }));
   const pathsByRepositoryId: Record<number, string> = {};
 
   for (const [repositoryId, candidates] of Object.entries(
     candidatesByRepositoryId,
   )) {
-    pathsByRepositoryId[Number(repositoryId)] = candidates[0];
+    // Prefiere el candidato que sí trae variables/puertos; si ninguno trae
+    // datos (o aún no se analizaron), cae al primero.
+    const withData = candidates.find((candidate) => {
+      const normalizedCandidate = normalizePath(candidate);
+      return normalizedComposeAnalyses.some(
+        (analysis) =>
+          analysis.normalized === normalizedCandidate && analysis.hasData,
+      );
+    });
+    pathsByRepositoryId[Number(repositoryId)] = withData ?? candidates[0];
   }
 
   return pathsByRepositoryId;

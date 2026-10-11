@@ -1,23 +1,33 @@
-import { useState } from 'react'
-import { serviceTone } from "@neoglito/web/features/projects/components/analyze/analyze-service-tone"
+import {
+  useProjectAnalysisState,
+  useProjectAnalysisDispatch,
+} from '@neoglito/web/features/analysis/project-analysis.context';
+import { shortName } from '@neoglito/web/features/repositories/repository-name';
+import { serviceTone } from '@neoglito/web/features/projects/components/analyze/analyze-service-tone';
 
-export interface AnalyzeRelationsService {
-  key: string
-  name: string
-  repositoryName: string
-  status: string
-  health: string
-}
-
-interface AnalyzeRelationsPlaceholderProps {
-  services: AnalyzeRelationsService[]
-}
-
-export function AnalyzeRelationsPlaceholder({
-  services,
-}: AnalyzeRelationsPlaceholderProps) {
-  const [selectedKey, setSelectedKey] = useState<string | null>(null)
-  const selected = services.find((service) => service.key === selectedKey) ?? null
+export function AnalyzeRelationsPlaceholder() {
+  const { analyze, repositories } = useProjectAnalysisState();
+  const dispatch = useProjectAnalysisDispatch();
+  const selectedKey = analyze.selectedKey;
+  const setSelectedKey = (key: string | null) =>
+    dispatch({ type: 'analyze-service-selected', key });
+  const services = analyze.repos.flatMap((repo) => {
+    const repository = repositories.find((r) => r.id === repo.repositoryId);
+    const repositoryName =
+      repo.label ??
+      (repository ? shortName(repository.name) : `#${repo.repositoryId}`);
+    return (
+      repo.deployment?.services.map((service, index) => ({
+        key: `${repo.repositoryId}:${index}`,
+        name: service.composeServiceName,
+        repositoryName,
+        status: service.status,
+        health: service.health,
+      })) ?? []
+    );
+  });
+  const selected =
+    services.find((service) => service.key === selectedKey) ?? null;
 
   return (
     <div className="flex flex-1 flex-wrap items-start gap-[18px]">
@@ -42,16 +52,16 @@ export function AnalyzeRelationsPlaceholder({
             className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3 bg-[radial-gradient(#e6eaf0_1px,transparent_1px)] [background-size:22px_22px] px-[22px] py-[22px] dark:bg-[radial-gradient(#253044_1px,transparent_1px)]"
           >
             {services.map((service) => {
-              const tone = serviceTone(service.status, service.health)
-              const isSelected = service.key === selectedKey
+              const tone = serviceTone(service.status, service.health);
+              const isSelected = service.key === selectedKey;
 
               return (
                 <button
                   key={service.key}
                   type="button"
                   onClick={(event) => {
-                    event.stopPropagation()
-                    setSelectedKey(isSelected ? null : service.key)
+                    event.stopPropagation();
+                    setSelectedKey(isSelected ? null : service.key);
                   }}
                   className={`flex flex-col gap-2 rounded-lg border px-3.5 py-3 text-left transition-colors ${
                     isSelected
@@ -77,7 +87,7 @@ export function AnalyzeRelationsPlaceholder({
                     {tone.label}
                   </span>
                 </button>
-              )
+              );
             })}
           </div>
         )}
@@ -133,5 +143,5 @@ export function AnalyzeRelationsPlaceholder({
         )}
       </aside>
     </div>
-  )
+  );
 }

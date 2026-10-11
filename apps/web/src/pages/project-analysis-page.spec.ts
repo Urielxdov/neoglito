@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DeploymentResponse } from '@neoglito/web/shared/api/contracts';
 import type { AnalysisState } from '@neoglito/web/features/analysis/analysis.reducer';
+import { analysisReducer } from '@neoglito/web/features/analysis/analysis.reducer';
 import ProjectAnalysisPage from './project-analysis-page';
 
 const fixtures = vi.hoisted(() => ({ analysis: null as AnalysisState }));
@@ -17,9 +18,6 @@ vi.mock('@neoglito/web/features/projects/hooks/use-route-project', () => ({
 }));
 vi.mock('@neoglito/web/features/projects/hooks/use-project-selectors', () => ({
   useActiveProjectRepositories: () => [],
-}));
-vi.mock('@neoglito/web/features/projects/hooks/use-project-analysis', () => ({
-  useProjectAnalysis: () => ({ closeAnalysis: vi.fn() }),
 }));
 
 const deployment: DeploymentResponse = {
@@ -95,6 +93,73 @@ describe('Recovering project analysis after a reload', () => {
     });
     expect(html).toContain('Despliegue saved-12');
     expect(html).toContain('Despliegue older-56');
+  });
+
+  it('uses the reducer selection for the detail panel and both service lists', () => {
+    fixtures.analysis = {
+      projectId: 7,
+      repos: [
+        {
+          repositoryId: 1,
+          label: 'Repositorio',
+          status: 'succeeded',
+          message: null,
+          deployment: {
+            ...deployment,
+            services: [
+              deployment.services[0],
+              {
+                ...deployment.services[0],
+                id: 'container-2',
+                composeServiceName: 'api',
+                serviceType: 'BACKEND',
+              },
+            ],
+          },
+        },
+      ],
+      collapsed: {},
+      selectedKey: null,
+      tab: 'services',
+    };
+    // The first service is selected until the user makes an explicit selection.
+    const detailHeader = (html: string) =>
+      html.split('<section')[1].split('grid grid-cols-')[0];
+    expect(detailHeader(renderPage())).toContain(
+      'Tipo de servicio: Base de datos',
+    );
+    fixtures.analysis = analysisReducer(fixtures.analysis, {
+      type: 'analyze-service-selected',
+      key: '1:1',
+    });
+    const html = renderPage();
+    expect(detailHeader(html)).toContain('Tipo de servicio: Backend');
+    expect(detailHeader(html)).not.toContain('Tipo de servicio: Base de datos');
+    fixtures.analysis = analysisReducer(fixtures.analysis, {
+      type: 'analyze-tab-changed',
+      tab: 'relations',
+    });
+    const relations = renderPage();
+    expect(relations).toContain('Consulta a');
+    expect(relations).not.toContain('Selecciona un contenedor');
+  });
+
+  it('reads collapsed groups from the same reducer state as the view', () => {
+    fixtures.analysis = {
+      projectId: 7,
+      repos: [
+        { repositoryId: 1, status: 'pending', deployment: null, message: null },
+      ],
+      collapsed: {},
+      selectedKey: null,
+      tab: 'services',
+    };
+    expect(renderPage()).toContain('Desplegando e identificando servicios');
+    fixtures.analysis = analysisReducer(fixtures.analysis, {
+      type: 'analyze-group-toggled',
+      repositoryId: 1,
+    });
+    expect(renderPage()).not.toContain('Desplegando e identificando servicios');
   });
 
   it('shows recovery in progress with a link back to Deploy', () => {

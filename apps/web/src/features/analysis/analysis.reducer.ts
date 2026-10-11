@@ -34,7 +34,7 @@ export type AnalysisAction =
     }
   | { type: 'analyze-repo-failed'; repositoryId: number; message: string }
   | { type: 'analyze-group-toggled'; repositoryId: number }
-  | { type: 'analyze-service-selected'; key: string }
+  | { type: 'analyze-service-selected'; key: string | null }
   | { type: 'analyze-tab-changed'; tab: AnalyzeTab };
 
 export const initialAnalysisState: AnalysisState = null;

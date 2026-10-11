@@ -124,9 +124,13 @@ describe('ProjectAnalysisService', () => {
         '/repositories/api/docker-compose.yml',
         '/repositories/api/docker-compose.prod.yml',
         '/repositories/api/apps/api/docker-compose.local.yml',
+        '/repositories/api/apps/api/docker-compose.yaml',
+        '/repositories/api/apps/web/compose.yml',
         '/repositories/web/docker-compose.yml',
         '/repositories/web/docker-compose.prod.yml',
         '/repositories/web/apps/api/docker-compose.local.yml',
+        '/repositories/web/apps/api/docker-compose.yaml',
+        '/repositories/web/apps/web/compose.yml',
       ],
     });
     expect(environmentExtractor.analyze).not.toHaveBeenCalled();

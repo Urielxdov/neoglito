@@ -1,9 +1,9 @@
-import type { Project } from '@neoglito/web/features/projects/project.model';
-import type { ProjectDetailRepositoryInfo } from '@neoglito/web/features/projects/components/detail/project-detail-view';
-import type {
-  AnalyzeState,
-  AnalyzeTab,
-} from '@neoglito/web/features/analysis/analysis.reducer';
+import {
+  useProjectAnalysisState,
+  useProjectAnalysisDispatch,
+} from '@neoglito/web/features/analysis/project-analysis.context';
+import { selectAnalysisServiceKey } from '@neoglito/web/features/analysis/analysis.selectors';
+import type { AnalyzeTab } from '@neoglito/web/features/analysis/analysis.reducer';
 import { formatRelativeTime } from '@neoglito/web/shared/utils/relative-time';
 import { AnalyzeRepoGroup } from '@neoglito/web/features/projects/components/analyze/analyze-repo-group';
 import { AnalyzeRelationsPlaceholder } from '@neoglito/web/features/projects/components/analyze/analyze-relations-placeholder';
@@ -11,25 +11,13 @@ import { serviceTone } from '@neoglito/web/features/projects/components/analyze/
 import { shortName } from '@neoglito/web/features/repositories/repository-name';
 import { AnalyzeServiceTypeBadge } from '@neoglito/web/features/projects/components/analyze/analyze-service-type-badge';
 
-interface ProjectAnalyzeViewProps {
-  project: Project;
-  repositories: ProjectDetailRepositoryInfo[];
-  analyze: AnalyzeState;
-  onBack(): void;
-  onToggleGroup(repositoryId: number): void;
-  onSelectService(key: string): void;
-  onTabChange(tab: AnalyzeTab): void;
-}
-
-export function ProjectAnalyzeView({
-  project,
-  repositories,
-  analyze,
-  onBack,
-  onToggleGroup,
-  onSelectService,
-  onTabChange,
-}: ProjectAnalyzeViewProps) {
+export function ProjectAnalyzeView() {
+  const { project, repositories, analyze, onBack } = useProjectAnalysisState();
+  const dispatch = useProjectAnalysisDispatch();
+  const onSelectService = (key: string) =>
+    dispatch({ type: 'analyze-service-selected', key });
+  const onTabChange = (tab: AnalyzeTab) =>
+    dispatch({ type: 'analyze-tab-changed', tab });
   const total = analyze.repos.length;
   const settled = analyze.repos.filter(
     (repo) => repo.status !== 'pending',
@@ -59,16 +47,7 @@ export function ProjectAnalyzeView({
       ? 'bg-[#fbefe0] dark:bg-[#2d1f10]'
       : 'bg-[#e6f4ec] dark:bg-[#12291d]';
 
-  const selectedKey =
-    analyze.selectedKey ??
-    (() => {
-      const firstSucceeded = analyze.repos.find(
-        (repo) =>
-          repo.status === 'succeeded' &&
-          (repo.deployment?.services.length ?? 0) > 0,
-      );
-      return firstSucceeded ? `${firstSucceeded.repositoryId}:0` : null;
-    })();
+  const selectedKey = selectAnalysisServiceKey(analyze);
 
   const [selectedRepositoryIdRaw, selectedServiceIndexRaw] =
     selectedKey?.split(':') ?? [];
@@ -92,29 +71,17 @@ export function ProjectAnalyzeView({
       ? selectedAnalyzeRepo.deployment.services[selectedServiceIndex]
       : undefined;
 
-  const allServices = analyze.repos.flatMap((repo) => {
-    const repository = repositories.find((r) => r.id === repo.repositoryId);
-    const repositoryName =
-      repo.label ??
-      (repository ? shortName(repository.name) : `#${repo.repositoryId}`);
-
-    return (
-      repo.deployment?.services.map((service, serviceIndex) => ({
-        key: `${repo.repositoryId}:${serviceIndex}`,
-        name: service.composeServiceName,
-        repositoryName,
-        status: service.status,
-        health: service.health,
-      })) ?? []
-    );
-  });
+  const serviceCount = analyze.repos.reduce(
+    (count, repo) => count + (repo.deployment?.services.length ?? 0),
+    0,
+  );
 
   const tabs: Array<{ key: AnalyzeTab; label: string; count: string }> = [
     { key: 'services', label: 'Servicios', count: String(total) },
     {
       key: 'relations',
       label: 'Relaciones',
-      count: String(allServices.length),
+      count: String(serviceCount),
     },
   ];
 
@@ -173,9 +140,7 @@ export function ProjectAnalyzeView({
         ))}
       </div>
 
-      {analyze.tab === 'relations' && (
-        <AnalyzeRelationsPlaceholder services={allServices} />
-      )}
+      {analyze.tab === 'relations' && <AnalyzeRelationsPlaceholder />}
 
       {analyze.tab === 'services' && (
         <div className="flex flex-1 flex-wrap items-start gap-[18px]">
@@ -188,39 +153,13 @@ export function ProjectAnalyzeView({
                 {total}
               </span>
             </div>
-            {analyze.repos.map((repo, index) => {
-              const repository = repositories.find(
-                (r) => r.id === repo.repositoryId,
-              );
-              const services =
-                repo.deployment?.services.map((service, serviceIndex) => ({
-                  key: `${repo.repositoryId}:${serviceIndex}`,
-                  name: service.composeServiceName,
-                  status: service.status,
-                  health: service.health,
-                  serviceType: service.serviceType,
-                })) ?? [];
-
-              return (
-                <AnalyzeRepoGroup
-                  key={repo.repositoryId}
-                  repositoryName={
-                    repo.label ??
-                    (repository
-                      ? shortName(repository.name)
-                      : `#${repo.repositoryId}`)
-                  }
-                  status={repo.status}
-                  message={repo.message}
-                  services={services}
-                  collapsed={Boolean(analyze.collapsed[repo.repositoryId])}
-                  selectedKey={selectedKey}
-                  isFirst={index === 0}
-                  onToggleCollapse={() => onToggleGroup(repo.repositoryId)}
-                  onSelectService={onSelectService}
-                />
-              );
-            })}
+            {analyze.repos.map((repo, index) => (
+              <AnalyzeRepoGroup
+                key={repo.repositoryId}
+                repositoryId={repo.repositoryId}
+                isFirst={index === 0}
+              />
+            ))}
           </aside>
 
           <section className="min-w-0 flex-[1_1_420px] overflow-hidden rounded-2xl border border-[#e6eaf0] bg-white shadow-[0_24px_60px_-20px_rgba(15,30,55,0.45),0_8px_22px_-12px_rgba(15,30,55,0.25)] dark:border-[#253044] dark:bg-[#111826] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]">

@@ -99,7 +99,7 @@ export class ProjectAnalysisService {
   private findComposeFiles(repositoryPath: string): Promise<string[]> {
     return this.fileFinder.findFile(
       repositoryPath,
-      /(^|\/)docker-compose.*\.yml$/,
+      /(^|\/)(docker-)?compose(\.[^/]+)?\.ya?ml$/,
     );
   }
 

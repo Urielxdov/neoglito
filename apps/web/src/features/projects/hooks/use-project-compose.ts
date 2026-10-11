@@ -68,6 +68,7 @@ export function useProjectCompose(project: Project) {
         repositories,
         clonedRepositoryPaths,
         dockerFilesPath,
+        composeAnalyses,
       ),
       candidatesByRepositoryId: getDockerFileCandidatesByRepositoryId(
         repositories,

@@ -1,40 +1,39 @@
+import {
+  useProjectAnalysisState,
+  useProjectAnalysisDispatch,
+} from '@neoglito/web/features/analysis/project-analysis.context';
+import { selectAnalysisServiceKey } from '@neoglito/web/features/analysis/analysis.selectors';
+import { shortName } from '@neoglito/web/features/repositories/repository-name';
 import { ChevronRight } from 'lucide';
 import { AppIcon } from '@neoglito/web/shared/components/app-icon';
-import type { AnalyzeRepoStatus } from '@neoglito/web/features/analysis/analysis.reducer';
 import { serviceTone } from '@neoglito/web/features/projects/components/analyze/analyze-service-tone';
 import { AnalyzeServiceTypeBadge } from '@neoglito/web/features/projects/components/analyze/analyze-service-type-badge';
 
-export interface AnalyzeGroupService {
-  key: string;
-  name: string;
-  status: string;
-  health: string;
-  serviceType: string;
-}
-
-interface AnalyzeRepoGroupProps {
-  repositoryName: string;
-  status: AnalyzeRepoStatus;
-  message: string | null;
-  services: AnalyzeGroupService[];
-  collapsed: boolean;
-  selectedKey: string | null;
-  isFirst: boolean;
-  onToggleCollapse(): void;
-  onSelectService(key: string): void;
-}
-
 export function AnalyzeRepoGroup({
-  repositoryName,
-  status,
-  message,
-  services,
-  collapsed,
-  selectedKey,
+  repositoryId,
   isFirst,
-  onToggleCollapse,
-  onSelectService,
-}: AnalyzeRepoGroupProps) {
+}: {
+  repositoryId: number;
+  isFirst: boolean;
+}) {
+  const { analyze, repositories } = useProjectAnalysisState();
+  const dispatch = useProjectAnalysisDispatch();
+  const repo = analyze.repos.find((repo) => repo.repositoryId === repositoryId);
+  const repository = repositories.find(
+    (repository) => repository.id === repositoryId,
+  );
+  const selectedKey = selectAnalysisServiceKey(analyze);
+  if (!repo) return null;
+  const repositoryName =
+    repo.label ??
+    (repository ? shortName(repository.name) : `#${repositoryId}`);
+  const { status, message } = repo;
+  const collapsed = Boolean(analyze.collapsed[repositoryId]);
+  const services = repo.deployment?.services ?? [];
+  const onToggleCollapse = () =>
+    dispatch({ type: 'analyze-group-toggled', repositoryId });
+  const onSelectService = (key: string) =>
+    dispatch({ type: 'analyze-service-selected', key });
   const readyCount = services.filter(
     (service) => serviceTone(service.status, service.health).tone === 'ok',
   ).length;
@@ -90,15 +89,16 @@ export function AnalyzeRepoGroup({
           )}
 
           {status === 'succeeded' &&
-            services.map((service) => {
+            services.map((service, serviceIndex) => {
+              const key = `${repositoryId}:${serviceIndex}`;
               const tone = serviceTone(service.status, service.health);
-              const selected = selectedKey === service.key;
+              const selected = selectedKey === key;
 
               return (
                 <button
-                  key={service.key}
+                  key={key}
                   type="button"
-                  onClick={() => onSelectService(service.key)}
+                  onClick={() => onSelectService(key)}
                   className={`flex items-center gap-2.5 rounded-lg px-3 py-2 pl-[30px] text-left transition-colors hover:bg-[#f8fafc] dark:hover:bg-[#0c121d] ${
                     selected ? 'bg-[#eef3fc] dark:bg-[#18243a]' : ''
                   }`}
@@ -110,7 +110,9 @@ export function AnalyzeRepoGroup({
                   <span
                     className={`flex min-w-0 flex-1 flex-col items-start gap-1 text-[13px] ${selected ? 'font-semibold' : 'font-medium'} text-[#16202e] dark:text-[#e8edf6]`}
                   >
-                    <span className="max-w-full truncate">{service.name}</span>
+                    <span className="max-w-full truncate">
+                      {service.composeServiceName}
+                    </span>
                     <AnalyzeServiceTypeBadge type={service.serviceType} />
                   </span>
                   <span className="shrink-0 font-mono text-[11.5px] text-[#8c98ac] dark:text-[#7a8699]">

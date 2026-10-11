@@ -7,6 +7,16 @@ export type {
 } from '@neoglito/shared/ports';
 
 export type {
+  TelemetryAttributes,
+  TelemetryJsonValue,
+  TelemetryLogResponse,
+  TelemetryMetricPointResponse,
+  TelemetryMetricType,
+  TelemetryPageResponse,
+  TelemetrySpanResponse,
+} from '@neoglito/shared/telemetry';
+
+export type {
   CloneRepositoryRequest,
   CloneRepositoryResponse,
   ComposePort,

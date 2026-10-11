@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import {
   useProjectAnalysisState,
   useProjectAnalysisDispatch,
@@ -177,6 +178,12 @@ export function ProjectAnalyzeView() {
                     </span>
                   </span>
                   <AnalyzeServiceTypeBadge type={selectedService.serviceType} />
+                  <Link
+                    to={`/projects/${project.id}/telemetry/${selectedAnalyzeRepo.deployment.id}`}
+                    className="inline-flex h-[30px] shrink-0 items-center rounded-lg border border-[#d6dce5] bg-white px-3 text-[12.5px] font-semibold text-[#51607a] hover:bg-[#f1f5f9] dark:border-[#2e3a51] dark:bg-[#111826] dark:text-[#a7b4c8] dark:hover:bg-[#1a2334]"
+                  >
+                    Telemetría
+                  </Link>
                   <span
                     className={`inline-flex h-[22px] shrink-0 items-center whitespace-nowrap rounded-full px-2.5 text-[11.5px] font-semibold ${serviceTone(selectedService.status, selectedService.health).textClassName} ${serviceTone(selectedService.status, selectedService.health).bgClassName}`}
                   >

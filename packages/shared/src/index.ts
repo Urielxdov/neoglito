@@ -1,5 +1,6 @@
 export type * from './api/index.js'
 export type * from './auth/index.js'
 export type * from './ports/index.js'
+export type * from './telemetry/index.js'
 export type * from './repository/index.js'
 export { normalizeText } from './text/index.js'

@@ -40,6 +40,14 @@
       "types": "./src/ports/*.ts",
       "import": "./src/ports/*.ts"
     },
+    "./telemetry": {
+      "types": "./src/telemetry/index.ts",
+      "import": "./src/telemetry/index.ts"
+    },
+    "./telemetry/*": {
+      "types": "./src/telemetry/*.ts",
+      "import": "./src/telemetry/*.ts"
+    },
     "./text": {
       "types": "./src/text/index.ts",
       "import": "./src/text/index.ts"

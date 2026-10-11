@@ -16,9 +16,11 @@ export function AppLayout() {
         ? 'Repositorios'
         : pathname.endsWith('/analysis')
           ? 'Análisis del proyecto'
-          : pathname.startsWith('/projects/')
-            ? 'Configuración del proyecto'
-            : 'Proyectos';
+          : pathname.includes('/telemetry/')
+            ? 'Telemetría del despliegue'
+            : pathname.startsWith('/projects/')
+              ? 'Configuración del proyecto'
+              : 'Proyectos';
   const logoRef = useRef<HTMLSpanElement>(null);
   const logoDocked = useNeoglitoSplash(logoRef, isDark);
 

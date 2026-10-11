@@ -5,6 +5,7 @@ import ProjectsPage from '@neoglito/web/pages/projects-page';
 import ProjectLayout from '@neoglito/web/pages/project-layout';
 import ProjectDetailPage from '@neoglito/web/pages/project-detail-page';
 import ProjectAnalysisPage from '@neoglito/web/pages/project-analysis-page';
+import ProjectTelemetryPage from '@neoglito/web/pages/project-telemetry-page';
 import { AppLayout } from '@neoglito/web/app/app-layout';
 import { ProtectedRoute } from '@neoglito/web/app/protected-route';
 import { WorkspaceLayout } from '@neoglito/web/app/workspace-layout';
@@ -22,6 +23,10 @@ export function AppRoutes() {
             <Route path="projects/:projectId" element={<ProjectLayout />}>
               <Route index element={<Navigate to="deploy" replace />} />
               <Route path="analysis" element={<ProjectAnalysisPage />} />
+              <Route
+                path="telemetry/:deploymentId"
+                element={<ProjectTelemetryPage />}
+              />
               <Route path=":tab" element={<ProjectDetailPage />} />
             </Route>
           </Route>

@@ -6,6 +6,7 @@ import { readFile as readComposeFile } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { parse } from 'yaml';
 import { resolveDockerHostPath, type DockerMount } from './docker-host-path.js';
+import { INJECTED_SERVICE_PREFIX } from '../../../telemetry/application/ports/telemetry-injector.port.js';
 import type {
   ContainerInspection,
   ContainerRuntimePort,
@@ -132,7 +133,12 @@ export class DockerComposeRuntime implements ContainerRuntimePort {
           health: health as ContainerRuntimeService['health'],
         };
       })
-      .filter((item) => item.containerId);
+      // Los servicios init del inyector de telemetría no son parte del despliegue del usuario.
+      .filter(
+        (item) =>
+          item.containerId &&
+          !item.composeServiceName.startsWith(INJECTED_SERVICE_PREFIX),
+      );
   }
 
   async inspect(
@@ -153,7 +159,12 @@ export class DockerComposeRuntime implements ContainerRuntimePort {
       const config = asRecord(item.Config);
       const networks = asRecord(asRecord(item.NetworkSettings).Networks);
       const labels = asRecord(config.Labels);
-      const containerId = typeof item.Id === 'string' ? item.Id : '';
+      // `docker compose ps` identifica los contenedores con el ID corto (12
+      // caracteres); `docker container inspect` siempre devuelve el ID
+      // completo. Truncamos aquí para que coincidan con el `service.id`
+      // guardado en base de datos y con el resto de IDs usados en el sistema.
+      const containerId =
+        typeof item.Id === 'string' ? item.Id.slice(0, 12) : '';
       if (!containerId)
         throw new Error('Docker devolvió un contenedor sin identificador');
 

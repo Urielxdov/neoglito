@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -20,6 +21,7 @@ import {
   deploymentRuntimeProjectName,
   type DeploymentComposeConfiguration,
   type DeploymentComposePort,
+  type DeploymentTelemetryConfiguration,
   type PreparedDeploymentCompose,
 } from '../../application/ports/deployment-compose.port.js';
 import {
@@ -28,6 +30,8 @@ import {
 } from './mirror-service-ports.js';
 import { CONTAINER_RUNTIME_PORT } from '../../../container/application/container-runtime.port.js';
 import type { ContainerRuntimePort } from '../../../container/application/container-runtime.port.js';
+import { TELEMETRY_INJECTOR_PORT } from '../../../telemetry/application/ports/telemetry-injector.port.js';
+import type { TelemetryInjectorPort } from '../../../telemetry/application/ports/telemetry-injector.port.js';
 
 const literal = (value: string) => value.replace(/\$/g, () => '$$');
 
@@ -38,6 +42,9 @@ export class YamlDeploymentComposeService implements DeploymentComposePort {
   constructor(
     @Inject(CONTAINER_RUNTIME_PORT)
     private readonly runtime: ContainerRuntimePort,
+    @Optional()
+    @Inject(TELEMETRY_INJECTOR_PORT)
+    private readonly telemetryInjector?: TelemetryInjectorPort,
   ) {}
 
   async readSource(composePath: string, deploymentId: string) {
@@ -67,6 +74,7 @@ export class YamlDeploymentComposeService implements DeploymentComposePort {
     sourcePath: string,
     deploymentId: string,
     configuration: DeploymentComposeConfiguration,
+    telemetry?: DeploymentTelemetryConfiguration,
   ): Promise<PreparedDeploymentCompose> {
     let document: unknown;
     try {
@@ -88,6 +96,15 @@ export class YamlDeploymentComposeService implements DeploymentComposePort {
       if (!isRecord(service))
         throw new BadRequestException(`Servicio Compose inválido: ${name}`);
       services[name] = { ...service };
+    }
+    // Antes que las variables del usuario: el inyector no pisa claves ya definidas.
+    if (telemetry && this.telemetryInjector) {
+      await this.telemetryInjector.inject(document, {
+        deploymentId,
+        projectId: telemetry.projectId,
+        token: telemetry.token,
+        projectDirectory: dirname(resolve(sourcePath)),
+      });
     }
     this.applyEnvironment(services, configuration.environment ?? []);
     if (

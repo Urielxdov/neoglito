@@ -10,6 +10,7 @@ import { DeploymentModule } from './deployment/deployment.module.js';
 import { ContainerModule } from './container/container.module.js';
 import { PortModule } from './ports/port.module.js';
 import { StartupModule } from './startup/startup.module.js';
+import { TelemetryModule } from './telemetry/telemetry.module.js';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { StartupModule } from './startup/startup.module.js';
     ContainerModule,
     PortModule,
     StartupModule,
+    TelemetryModule,
   ],
   controllers: [AppController],
   providers: [AppService, RestoreDeploymentPortReservationsService],

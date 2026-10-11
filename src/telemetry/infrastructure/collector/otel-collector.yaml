@@ -1,0 +1,62 @@
+# OpenTelemetry Collector (distribución contrib) de neoglito.
+# Recibe OTLP/HTTP en :4318 y reenvía a la API (receptor /telemetry/ingest)
+# conservando el token por deployment del header Authorization.
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+        # Expone los headers de la petición como metadata para headers_setter y batch.
+        include_metadata: true
+
+extensions:
+  headers_setter:
+    headers:
+      - action: upsert
+        key: Authorization
+        from_context: authorization
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+  batch:
+    send_batch_size: 1024
+    timeout: 5s
+    # Un lote por token: sin esto se mezclarían datos de deployments distintos
+    # y se perdería el header de cada emisor.
+    metadata_keys: [authorization]
+    metadata_cardinality_limit: 1000
+
+exporters:
+  otlphttp/neoglito:
+    # El exporter agrega /v1/traces, /v1/metrics y /v1/logs.
+    endpoint: ${env:NEOGLITO_INGEST_URL}
+    encoding: json
+    compression: none
+    auth:
+      authenticator: headers_setter
+    retry_on_failure:
+      enabled: true
+      max_elapsed_time: 120s
+
+service:
+  extensions: [headers_setter]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/neoglito]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/neoglito]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/neoglito]
+  telemetry:
+    logs:
+      level: info

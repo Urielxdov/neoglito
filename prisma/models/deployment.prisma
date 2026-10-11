@@ -37,15 +37,19 @@ enum ServiceType {
 }
 
 model Deployment {
-  id          String              @id @default(uuid())
-  projectId   Int
-  composePath String
-  status      DeploymentStatus    @default(pending)
-  createdAt   DateTime            @default(now())
-  startedAt   DateTime?
-  finishedAt  DateTime?
-  project     Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  services    DeploymentService[]
+  id               String                    @id @default(uuid())
+  projectId        Int
+  composePath      String
+  status           DeploymentStatus          @default(pending)
+  createdAt        DateTime                  @default(now())
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  project          Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  services         DeploymentService[]
+  telemetryToken   DeploymentTelemetryToken?
+  telemetrySpans   TelemetrySpan[]
+  telemetryMetrics TelemetryMetricPoint[]
+  telemetryLogs    TelemetryLog[]
 
   @@index([projectId, createdAt])
 }

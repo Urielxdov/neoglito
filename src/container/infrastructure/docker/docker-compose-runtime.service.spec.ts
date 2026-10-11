@@ -223,6 +223,24 @@ describe('DockerComposeRuntime', () => {
     );
   });
 
+  it('hides the auxiliary init services added by the telemetry injector', async () => {
+    respond(
+      JSON.stringify([
+        { ID: 'api', Service: 'api', State: 'running', Publishers: [] },
+        {
+          ID: 'init',
+          Service: 'neoglito-otel-init-nodejs',
+          State: 'exited',
+          Publishers: [],
+        },
+      ]),
+    );
+    const containers = await new DockerComposeRuntime().list('/repo', 'c.yml');
+    expect(containers.map((container) => container.composeServiceName)).toEqual([
+      'api',
+    ]);
+  });
+
   it('treats missing config files and directories as unavailable evidence', async () => {
     respond('', 1);
     respond('', 1);

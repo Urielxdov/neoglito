@@ -16,6 +16,8 @@ import {
   StopDeploymentUseCase,
 } from './deploy-compose.use-case.js';
 import { YamlDeploymentComposeService } from '../../infrastructure/compose/yaml-deployment-compose.service.js';
+import { OtelComposeInjector } from '../../../telemetry/infrastructure/injection/otel-compose-injector.service.js';
+import type { DeploymentTelemetryTokenPort } from '../../../telemetry/application/ports/deployment-telemetry-token.port.js';
 
 vi.mock('node:fs/promises', async (importOriginal) => ({
   ...(await importOriginal<typeof import('node:fs/promises')>()),
@@ -234,4 +236,94 @@ it('keeps the previous project selection for deployments recorded with the sourc
     sourcePath,
     undefined,
   );
+});
+
+describe('telemetry', () => {
+  const tokens = () => ({
+    issue: vi.fn(async () => 'ngt_secret'),
+    resolve: vi.fn(),
+    revoke: vi.fn(async () => undefined),
+  });
+  const withTelemetry = (token: ReturnType<typeof tokens>) => {
+    const base = setup();
+    const useCase = new DeployComposeUseCase(
+      base.prisma as unknown as PrismaService,
+      { getComposeFiles: vi.fn(async () => ({ dockerFilesPath: [base.sourcePath] })) } as unknown as ProjectAnalysisService,
+      base.runtime as unknown as ContainerRuntimePort,
+      base.reservations as unknown as PortReservationPort,
+      new YamlDeploymentComposeService(
+        base.runtime as unknown as ContainerRuntimePort,
+        new OtelComposeInjector(),
+      ),
+      token as unknown as DeploymentTelemetryTokenPort,
+    );
+    return { ...base, useCase };
+  };
+  const writtenCompose = () => {
+    const call = vi.mocked(writeFile).mock.calls.at(-1);
+    return parse(call?.[1] as string) as {
+      services: Record<string, { environment?: Record<string, string> }>;
+    };
+  };
+
+  it('issues a per-deployment token and injects it only into application services', async () => {
+    const token = tokens();
+    const { useCase, sourcePath } = withTelemetry(token);
+    await useCase.execute(1, 1, sourcePath);
+    expect(token.issue).toHaveBeenCalledExactlyOnceWith('deployment');
+    const { services } = writtenCompose();
+    expect(services.worker.environment).toMatchObject({
+      OTEL_EXPORTER_OTLP_HEADERS: 'authorization=Bearer%20ngt_secret',
+      OTEL_SERVICE_NAME: 'worker',
+      OTEL_RESOURCE_ATTRIBUTES:
+        'neoglito.deployment.id=deployment,neoglito.project.id=1',
+    });
+    // postgres es infraestructura: conserva solo su configuración original.
+    expect(services.db.environment).toEqual({ MODE: 'original' });
+  });
+
+  it('lets user-defined variables win over the injected ones', async () => {
+    const { useCase, sourcePath } = withTelemetry(tokens());
+    await useCase.execute(1, 1, sourcePath, {
+      environment: [{ service: 'worker', key: 'OTEL_SERVICE_NAME', value: 'mine' }],
+    });
+    expect(writtenCompose().services.worker.environment?.OTEL_SERVICE_NAME).toBe(
+      'mine',
+    );
+  });
+
+  it('does not issue tokens when telemetry is disabled', async () => {
+    vi.stubEnv('TELEMETRY_ENABLED', 'false');
+    try {
+      const token = tokens();
+      const { useCase, sourcePath } = withTelemetry(token);
+      await useCase.execute(1, 1, sourcePath);
+      expect(token.issue).not.toHaveBeenCalled();
+      expect(writtenCompose().services.worker.environment).toBeUndefined();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('revokes the token when the deployment fails to start', async () => {
+    const token = tokens();
+    const { useCase, sourcePath, runtime } = withTelemetry(token);
+    runtime.up.mockRejectedValueOnce(new Error('build failed'));
+    await expect(useCase.execute(1, 1, sourcePath)).rejects.toThrow(
+      'build failed',
+    );
+    expect(token.revoke).toHaveBeenCalledExactlyOnceWith('deployment');
+  });
+
+  it('revokes the token when the deployment is stopped', async () => {
+    const token = tokens();
+    const { prisma, runtime, reservations } = withTelemetry(token);
+    await new StopDeploymentUseCase(
+      prisma as unknown as PrismaService,
+      runtime as unknown as ContainerRuntimePort,
+      reservations as unknown as PortReservationPort,
+      token as unknown as DeploymentTelemetryTokenPort,
+    ).execute('deployment');
+    expect(token.revoke).toHaveBeenCalledExactlyOnceWith('deployment');
+  });
 });

@@ -59,3 +59,10 @@ asignados en inputs deshabilitados y evita reservarlos de nuevo. Si la consulta
 falla, bloquea temporalmente los inputs y ofrece reintentar. El modelo actual
 guarda un puerto TCP por servicio: no se infieren asignaciones para múltiples
 publicaciones de un mismo servicio.
+
+Antes de aplicar `environment` y `ports`, `prepare()` pasa el Compose por
+`OtelComposeInjector` (ver `src/telemetry/README.md`) cuando el despliegue tiene
+token de telemetría: añade variables `OTEL_*`, `extra_hosts` y, si detecta el
+lenguaje, el agente de auto-instrumentación con un servicio
+`neoglito-otel-init-*`. Las variables enviadas por el usuario prevalecen sobre
+las inyectadas, y `DockerComposeRuntime.list()` oculta los servicios init.

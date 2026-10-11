@@ -23,6 +23,15 @@ services:
       NODE_TLS_REJECT_UNAUTHORIZED: ${NODE_TLS_REJECT_UNAUTHORIZED:-1}
       # Host desde el que la API alcanza los puertos publicados por los despliegues
       CONTAINER_PROBE_HOST: ${CONTAINER_PROBE_HOST:-host.docker.internal}
+      # Telemetría: la API envía su propia telemetría al collector y recibe, vía el
+      # collector, la de los contenedores desplegados (ver src/telemetry)
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      TELEMETRY_SYSTEM_TOKEN: ${TELEMETRY_SYSTEM_TOKEN:-}
+      TELEMETRY_ENABLED: ${TELEMETRY_ENABLED:-true}
+      TELEMETRY_AUTO_INSTRUMENTATION: ${TELEMETRY_AUTO_INSTRUMENTATION:-true}
+      TELEMETRY_RETENTION_DAYS: ${TELEMETRY_RETENTION_DAYS:-7}
+      # Collector visto desde los contenedores desplegados (puerto publicado en el host)
+      TELEMETRY_DEPLOYMENT_COLLECTOR_ENDPOINT: ${TELEMETRY_DEPLOYMENT_COLLECTOR_ENDPOINT:-http://host.docker.internal:4318}
       # URL para conectarnos a PostgreSQL
       # postgres:postgres → usuario:contraseña
       # @postgres → nombre del servicio de PostgreSQL
@@ -78,6 +87,19 @@ services:
     command: >
       sh -c "npm ci --include=dev &&
              npm --workspace @neoglito/web run dev -- --host 0.0.0.0"
+  otel-collector:
+    # Distribución contrib: headers_setter (token por deployment) no está en la core
+    image: otel/opentelemetry-collector-contrib:0.162.0
+    ports:
+      - "4318:4318" # OTLP/HTTP
+    volumes:
+      - ./src/telemetry/infrastructure/collector/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    environment:
+      # Con la API fuera de Docker usar http://host.docker.internal:3000/telemetry/ingest
+      NEOGLITO_INGEST_URL: ${NEOGLITO_INGEST_URL:-http://api:3000/telemetry/ingest}
+    depends_on:
+      - api
+
   redis:
     image: redis:8-alpine
     ports:

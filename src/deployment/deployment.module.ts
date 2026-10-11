@@ -4,6 +4,7 @@ import { PrismaModule } from '../prisma/prisma.module.js';
 import { AnalysisModule } from '../analisys/analysis.module.js';
 import { ContainerModule } from '../container/container.module.js';
 import { PortModule } from '../ports/port.module.js';
+import { TelemetryModule } from '../telemetry/telemetry.module.js';
 import {
   DeployComposeUseCase,
   GetProjectDeploymentsUseCase,
@@ -25,6 +26,7 @@ import {
     AnalysisModule,
     ContainerModule,
     PortModule,
+    TelemetryModule,
   ],
   controllers: [DeploymentController, ProjectDeploymentController],
   providers: [

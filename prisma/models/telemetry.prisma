@@ -1,0 +1,66 @@
+// deploymentId nulo = telemetría de la propia API (token de sistema).
+
+model DeploymentTelemetryToken {
+  id           String     @id @default(uuid())
+  deploymentId String     @unique
+  tokenHash    String     @unique
+  createdAt    DateTime   @default(now())
+  revokedAt    DateTime?
+  deployment   Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+}
+
+model TelemetrySpan {
+  id            String      @id @default(uuid())
+  deploymentId  String?
+  serviceName   String
+  traceId       String
+  spanId        String
+  parentSpanId  String?
+  name          String
+  kind          Int
+  startTime     DateTime
+  endTime       DateTime
+  durationMs    Float
+  statusCode    Int
+  statusMessage String?
+  attributes    Json
+  resource      Json
+  deployment    Deployment? @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+
+  @@index([deploymentId, startTime])
+  @@index([traceId])
+  @@index([startTime])
+}
+
+model TelemetryMetricPoint {
+  id           String      @id @default(uuid())
+  deploymentId String?
+  serviceName  String
+  name         String
+  unit         String?
+  type         String
+  time         DateTime
+  value        Float?
+  histogram    Json?
+  attributes   Json
+  deployment   Deployment? @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+
+  @@index([deploymentId, name, time])
+  @@index([time])
+}
+
+model TelemetryLog {
+  id           String      @id @default(uuid())
+  deploymentId String?
+  serviceName  String
+  time         DateTime
+  severity     String
+  body         String
+  traceId      String?
+  spanId       String?
+  attributes   Json
+  deployment   Deployment? @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+
+  @@index([deploymentId, time])
+  @@index([time])
+}

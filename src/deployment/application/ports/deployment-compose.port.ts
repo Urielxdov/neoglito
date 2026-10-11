@@ -7,6 +7,12 @@ export type DeploymentComposeConfiguration = Pick<
   'environment' | 'ports' | 'mirrorPorts'
 >;
 
+/** Credencial con la que los servicios del deployment envían telemetría al collector. */
+export interface DeploymentTelemetryConfiguration {
+  token: string;
+  projectId?: number;
+}
+
 export interface PreparedDeploymentCompose {
   composePath: string;
   projectName: string;
@@ -25,6 +31,7 @@ export interface DeploymentComposePort {
     sourcePath: string,
     deploymentId: string,
     configuration: DeploymentComposeConfiguration,
+    telemetry?: DeploymentTelemetryConfiguration,
   ): Promise<PreparedDeploymentCompose>;
 }
 

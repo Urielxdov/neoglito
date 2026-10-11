@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { dirname, resolve, sep } from 'node:path';
 import { PrismaService } from '../../../prisma/prisma.service.js';
@@ -31,8 +32,12 @@ import {
 import type {
   DeploymentComposePort,
   DeploymentComposeConfiguration,
+  DeploymentTelemetryConfiguration,
   PreparedDeploymentCompose,
 } from '../ports/deployment-compose.port.js';
+import { DEPLOYMENT_TELEMETRY_TOKEN_PORT } from '../../../telemetry/application/ports/deployment-telemetry-token.port.js';
+import type { DeploymentTelemetryTokenPort } from '../../../telemetry/application/ports/deployment-telemetry-token.port.js';
+import { isTelemetryEnabled } from '../../../telemetry/application/telemetry-config.js';
 
 interface DeploymentRecord {
   id: string;
@@ -92,6 +97,9 @@ export class DeployComposeUseCase {
     private readonly portReservation: PortReservationPort,
     @Inject(DEPLOYMENT_COMPOSE_PORT)
     private readonly compose: DeploymentComposePort,
+    @Optional()
+    @Inject(DEPLOYMENT_TELEMETRY_TOKEN_PORT)
+    private readonly telemetryTokens?: DeploymentTelemetryTokenPort,
   ) {}
 
   async execute(
@@ -127,6 +135,7 @@ export class DeployComposeUseCase {
         composeFile,
         deployment.id,
         configuration,
+        await this.issueTelemetry(deployment.id, projectId),
       );
       await this.prisma.deployment.update({
         where: { id: deployment.id },
@@ -227,6 +236,9 @@ export class DeployComposeUseCase {
       });
       return toDeployment(runningDeployment);
     } catch (error) {
+      await this.telemetryTokens
+        ?.revoke(deployment.id)
+        .catch(() => undefined);
       // Compose puede haber creado parte de los contenedores antes de fallar.
       if (runtimeStarted && prepared) {
         await this.runtime
@@ -263,6 +275,17 @@ export class DeployComposeUseCase {
 
       throw error;
     }
+  }
+
+  private async issueTelemetry(
+    deploymentId: string,
+    projectId: number,
+  ): Promise<DeploymentTelemetryConfiguration | undefined> {
+    if (!this.telemetryTokens || !isTelemetryEnabled()) return undefined;
+    return {
+      token: await this.telemetryTokens.issue(deploymentId),
+      projectId,
+    };
   }
 
   private deploymentPortOwnerId(deploymentId: string, port: number): string {
@@ -306,6 +329,9 @@ export class StopDeploymentUseCase {
     private readonly runtime: ContainerRuntimePort,
     @Inject(PORT_RESERVATION_PORT)
     private readonly portReservation: PortReservationPort,
+    @Optional()
+    @Inject(DEPLOYMENT_TELEMETRY_TOKEN_PORT)
+    private readonly telemetryTokens?: DeploymentTelemetryTokenPort,
   ) {}
 
   async execute(deploymentId: string) {
@@ -334,6 +360,8 @@ export class StopDeploymentUseCase {
       await Promise.all(
         services.map((service) => this.portReservation.releasePort(service.id)),
       );
+      // Un deployment detenido ya no debe poder enviar telemetría.
+      await this.telemetryTokens?.revoke(deploymentId);
       await this.prisma.deploymentService.updateMany({
         where: { deploymentId },
         data: { status: 'exited', health: 'none', lastObservedAt: new Date() },

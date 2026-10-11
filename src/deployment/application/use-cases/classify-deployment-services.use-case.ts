@@ -95,17 +95,26 @@ export class ClassifyDeploymentServicesUseCase {
         result.classification,
       ]),
     );
+    const inspectedById = new Map(
+      inspections.map((container) => [container.containerId, container]),
+    );
     const classified = deployment.services.map((service) => {
       const container = observedById.get(service.id)!;
+      const inspected = inspectedById.get(service.id);
       const result = classifiedById.get(service.id);
       if (!result)
         throw new ConflictException(
           `No se recibió clasificación para ${service.composeServiceName}`,
         );
 
+      const context = `imagen=${inspected?.image ?? '?'} puertos=[${(inspected?.ports ?? []).join(',')}] comando=[${(inspected?.command ?? []).join(' ')}]`;
       if (result.kind !== 'resolved') {
+        this.logger.warn(
+          `Clasificación sin resolver de ${service.composeServiceName}: ${result.kind}; ${context}; evidencia: ${result.evidence.join(' | ') || '(sin evidencia)'}`,
+        );
+      } else {
         this.logger.debug(
-          `Clasificación de ${service.composeServiceName}: ${result.kind}; ${result.evidence.join('; ')}`,
+          `Clasificación resuelta de ${service.composeServiceName}: ${result.type}; ${context}; evidencia: ${result.evidence.join(' | ') || '(sin evidencia)'}`,
         );
       }
       return {

@@ -1,9 +1,12 @@
+import { Logger } from '@nestjs/common';
 import { ServiceType } from '../../../deployment/domain/value-objects/service-type.js';
 import type {
   Classification,
   ContainerContext,
 } from '../../application/container-classification.port.js';
 import type { PortResult } from '../probing/port-identification.js';
+
+const logger = new Logger('ContainerClassification');
 
 export type { PortResult };
 export type {
@@ -61,10 +64,17 @@ export async function classify(
 
   for (const handler of handlers) {
     const verdict = await handler.handle(ctx, candidates, facts);
+    logger.debug(
+      `[${ctx.id}] veredicto: ${verdict.kind}` +
+        (verdict.kind === 'pass' ? '' : `: ${verdict.evidence}`),
+    );
     if (verdict.kind === 'pass') continue;
 
     evidence.push(verdict.evidence);
     if (verdict.kind === 'conflict') {
+      logger.debug(
+        `[${ctx.id}] conflict final: candidatos=[${verdict.candidates.join(',')}]`,
+      );
       return { kind: 'conflict', candidates: verdict.candidates, evidence };
     }
     if (verdict.kind === 'resolved') {
@@ -73,9 +83,14 @@ export async function classify(
     candidates = verdict.candidates;
   }
 
-  if (candidates.length === ALL_TYPES.length)
+  if (candidates.length === ALL_TYPES.length) {
+    logger.debug(`[${ctx.id}] ningún handler aportó evidencia -> unknown`);
     return { kind: 'unknown', evidence };
+  }
   if (candidates.length === 1)
     return { kind: 'resolved', type: candidates[0], evidence };
+  logger.debug(
+    `[${ctx.id}] ambiguous final: candidatos=[${candidates.join(',')}]`,
+  );
   return { kind: 'ambiguous', candidates, evidence };
 }

@@ -1,3 +1,4 @@
+import * as http from 'node:http'
 import { ServiceType } from '../../../deployment/domain/value-objects/service-type.js'
 import type { Discriminator } from './discrimination.js'
 
@@ -137,40 +138,51 @@ export const HTTP_CHECKS: readonly HttpCheck[] = [
 // ── I/O: lo único que toca la red ─────────────────────────────
 export type SnapshotFetcher = (host: string, port: number, path: string) => Promise<HttpSnapshot | null>
 
-/** Lee como máximo `MAX_BODY_BYTES` y cancela el resto del stream. */
-async function readBody(response: Response): Promise<string> {
-  const reader = response.body?.getReader()
-  if (!reader) return ''
-
-  const chunks: Uint8Array[] = []
-  let received = 0
-  try {
-    while (received < MAX_BODY_BYTES) {
-      const { done, value } = await reader.read()
-      if (done) break
-      chunks.push(value)
-      received += value.byteLength
-    }
-  } finally {
-    await reader.cancel().catch(() => undefined)
-  }
-
-  return Buffer.concat(chunks).subarray(0, MAX_BODY_BYTES).toString('utf8')
-}
-
-export const fetchSnapshot: SnapshotFetcher = async (host, port, path) => {
-  try {
-    const response = await fetch(`http://${host}:${port}${path}`, {
-      // Un 302 a /login ya trae los headers útiles y no hay que salir del contenedor.
-      redirect: 'manual',
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      headers: { 'user-agent': 'hub-classifier' },
-    })
-    return { status: response.status, headers: response.headers, body: await readBody(response) }
-  } catch {
-    return null
-  }
-}
+// `node:http` en vez de `fetch`: undici ignora el header Host, y necesitamos fijarlo
+// a localhost porque servidores de desarrollo (Vite, webpack-dev-server, Django)
+// rechazan hosts desconocidos como host.docker.internal. No sigue redirecciones:
+// un 302 a /login ya trae los headers útiles.
+export const fetchSnapshot: SnapshotFetcher = (host, port, path) =>
+  new Promise((resolve) => {
+    const request = http.request(
+      {
+        host,
+        port,
+        path,
+        method: 'GET',
+        timeout: REQUEST_TIMEOUT_MS,
+        headers: { host: `localhost:${port}`, 'user-agent': 'hub-classifier' },
+      },
+      (response) => {
+        const chunks: Buffer[] = []
+        let received = 0
+        const finish = () => {
+          const headers = new Headers()
+          for (const [name, value] of Object.entries(response.headers)) {
+            if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(', ') : value)
+          }
+          resolve({
+            status: response.statusCode ?? 0,
+            headers,
+            body: Buffer.concat(chunks).subarray(0, MAX_BODY_BYTES).toString('utf8'),
+          })
+        }
+        response.on('data', (chunk: Buffer) => {
+          chunks.push(chunk)
+          received += chunk.byteLength
+          if (received >= MAX_BODY_BYTES) {
+            response.destroy()
+            finish()
+          }
+        })
+        response.on('end', finish)
+        response.on('error', () => resolve(null))
+      },
+    )
+    request.on('timeout', () => request.destroy())
+    request.on('error', () => resolve(null))
+    request.end()
+  })
 
 /** Primera huella que coincide en un puerto. Cada ruta se pide una sola vez. */
 export async function fingerprintPort(

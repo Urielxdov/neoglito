@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../../../prisma/prisma.service.js';
+import type { TelemetryLog } from '../../domain/entities/telemetry-log.js';
 import type { TelemetryRepositoryPort } from '../ports/telemetry-repository.port.js';
 import { IngestTelemetryUseCase } from './ingest-telemetry.use-case.js';
 import { PurgeExpiredTelemetryUseCase } from './purge-expired-telemetry.use-case.js';
@@ -20,38 +21,20 @@ beforeEach(() => vi.clearAllMocks());
 
 describe('IngestTelemetryUseCase', () => {
   const ingest = new IngestTelemetryUseCase(asRepository());
+  const log = { body: 'a' } as unknown as TelemetryLog;
 
-  it('persiste los registros mapeados con el deployment del token', async () => {
-    const count = await ingest.logs(
-      {
-        resourceLogs: [
-          {
-            scopeLogs: [
-              {
-                logRecords: [
-                  {
-                    timeUnixNano: '1700000000000000000',
-                    body: { stringValue: 'a' },
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-      'dep-1',
-    );
-    expect(count).toBe(1);
-    expect(repository.saveLogs).toHaveBeenCalledExactlyOnceWith([
-      expect.objectContaining({ deploymentId: 'dep-1', body: 'a' }),
-    ]);
+  it('persiste los registros recibidos y devuelve cuántos guardó', async () => {
+    expect(await ingest.logs([log])).toBe(1);
+    expect(repository.saveLogs).toHaveBeenCalledExactlyOnceWith([log]);
   });
 
-  it('no toca la base de datos si el lote no trae registros válidos', async () => {
-    expect(await ingest.traces({ resourceSpans: [] }, null)).toBe(0);
-    expect(await ingest.metrics({}, null)).toBe(0);
+  it('no toca la base de datos si el lote viene vacío', async () => {
+    expect(await ingest.spans([])).toBe(0);
+    expect(await ingest.metricPoints([])).toBe(0);
+    expect(await ingest.logs([])).toBe(0);
     expect(repository.saveSpans).not.toHaveBeenCalled();
     expect(repository.saveMetricPoints).not.toHaveBeenCalled();
+    expect(repository.saveLogs).not.toHaveBeenCalled();
   });
 });
 

@@ -11,6 +11,7 @@ import {
 import { ApiExcludeController } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { IngestTelemetryUseCase } from '../application/use-cases/ingest-telemetry.use-case.js';
+import { mapLogs, mapMetrics, mapTraces } from './otlp/otlp-json-mapper.js';
 import {
   TelemetryIngestGuard,
   type TelemetryIngestRequest,
@@ -35,7 +36,9 @@ export class TelemetryIngestController {
     @Res() response: Response,
   ): Promise<void> {
     this.requireJson(request);
-    await this.ingest.traces(body, request.telemetryDeploymentId ?? null);
+    await this.ingest.spans(
+      mapTraces(body, request.telemetryDeploymentId ?? null),
+    );
     response.status(200).json({});
   }
 
@@ -47,7 +50,9 @@ export class TelemetryIngestController {
     @Res() response: Response,
   ): Promise<void> {
     this.requireJson(request);
-    await this.ingest.metrics(body, request.telemetryDeploymentId ?? null);
+    await this.ingest.metricPoints(
+      mapMetrics(body, request.telemetryDeploymentId ?? null),
+    );
     response.status(200).json({});
   }
 
@@ -59,7 +64,9 @@ export class TelemetryIngestController {
     @Res() response: Response,
   ): Promise<void> {
     this.requireJson(request);
-    await this.ingest.logs(body, request.telemetryDeploymentId ?? null);
+    await this.ingest.logs(
+      mapLogs(body, request.telemetryDeploymentId ?? null),
+    );
     response.status(200).json({});
   }
 

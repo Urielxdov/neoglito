@@ -20,7 +20,6 @@ configuración y las variables de entorno están en
   - casos de uso: ingesta, consulta y purga por retención;
   - `dto/otlp.ts`: subconjunto del JSON OTLP que recibe el backend.
 - `infrastructure/`:
-  - `otlp/`: mapper OTLP JSON → entidades.
   - `persistence/`: repositorios Prisma (spans, métricas, logs y tokens con hash SHA-256).
   - `injection/`: inyector del Compose, detector de lenguaje y catálogo de agentes.
   - `sdk/`: SDK de la propia API y `TelemetryLogger`.
@@ -28,6 +27,7 @@ configuración y las variables de entorno están en
   - `collector/`: configuración del collector.
 - `presentation/`:
   - `POST /telemetry/ingest/v1/{traces,metrics,logs}` (solo JSON, token Bearer; fuera del envelope `ApiResponse`);
+  - `otlp/`: mapper OTLP JSON → entidades; el controller decodifica y el caso de uso solo recibe entidades de dominio;
   - `GET /deployment/:id/telemetry/{traces,metrics,logs}` con JWT, filtros y cursor `before`.
 
 ## Inyector
